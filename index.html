@@ -1,0 +1,2400 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý đào tạo - Bệnh viện Đa khoa Sài Gòn Tam Kỳ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#F5F6F2;
+    --panel:#FFFFFF;
+    --ink:#1B2E2A;
+    --muted:#6B7A74;
+    --line:#DDE3DD;
+    --accent:#2F6F5E;
+    --accent-dark:#234F42;
+    --gold:#B8863C;
+    --danger:#B54D3F;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',sans-serif;font-size:14.5px;line-height:1.5;}
+  h1,h2,h3{font-family:'Source Serif 4',serif;font-weight:600;margin:0;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select{font-family:inherit;}
+
+  /* ---------- Login ---------- */
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .login-box{width:100%;max-width:380px;}
+  .login-mark{font-family:'Source Serif 4',serif;font-size:15px;color:var(--accent-dark);letter-spacing:.02em;margin-bottom:6px;}
+  .login-box h1{font-size:26px;color:var(--ink);margin-bottom:6px;}
+  .login-sub{color:var(--muted);font-size:14px;margin-bottom:28px;}
+  .field-label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;}
+  .login-box input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:var(--radius);font-size:16px;letter-spacing:.03em;background:var(--panel);color:var(--ink);}
+  .login-box input:focus{outline:none;border-color:var(--accent);}
+  .btn-primary{margin-top:16px;width:100%;padding:11px 12px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);font-size:14.5px;font-weight:500;}
+  .btn-primary:hover{background:var(--accent-dark);}
+  .login-error{margin-top:14px;font-size:13.5px;color:var(--danger);display:none;}
+
+  /* ---------- App shell ---------- */
+  #app-screen{display:none;min-height:100vh;}
+  .shell{display:flex;min-height:100vh;}
+  .sidebar{width:236px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;}
+  .sidebar-mark{padding:22px 20px 18px;border-bottom:1px solid var(--line);}
+  .sidebar-mark .title{font-family:'Source Serif 4',serif;font-size:17px;font-weight:600;}
+  .sidebar-mark .sub{font-size:12px;color:var(--muted);margin-top:2px;}
+  nav.nav{flex:1;padding:14px 10px;}
+  .nav-item{display:block;width:100%;text-align:left;background:none;border:none;padding:9px 12px;border-radius:var(--radius);font-size:14px;color:var(--ink);margin-bottom:2px;}
+  .nav-item:hover{background:var(--bg);}
+  .nav-item.active{background:var(--accent);color:#fff;}
+  .nav-item.disabled{color:#B7BEBA;cursor:default;}
+  .nav-item.disabled:hover{background:none;}
+  .sidebar-user{border-top:1px solid var(--line);padding:14px 20px;}
+  .sidebar-user .name{font-size:13.5px;font-weight:500;}
+  .sidebar-user .role{font-size:12px;color:var(--muted);margin-top:1px;}
+  .sidebar-user button{margin-top:10px;background:none;border:1px solid var(--line);border-radius:var(--radius);padding:6px 10px;font-size:12.5px;color:var(--muted);}
+  .sidebar-user button:hover{border-color:var(--danger);color:var(--danger);}
+
+  .main{flex:1;padding:32px 40px;max-width:1040px;}
+  .main h2{font-size:22px;margin-bottom:4px;}
+  .main .desc{color:var(--muted);font-size:13.5px;margin-bottom:26px;}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);}
+  table{width:100%;border-collapse:collapse;}
+  th,td{text-align:left;padding:10px 14px;font-size:13.5px;border-bottom:1px solid var(--line);}
+  th{color:var(--muted);font-weight:500;font-size:12.5px;}
+  tr:last-child td{border-bottom:none;}
+  .role-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11.5px;}
+  .role-tag.admin{background:#EFE3CF;color:var(--gold);}
+  .role-tag.hoc_vien{background:#E1EBE7;color:var(--accent-dark);}
+  .row-actions button{background:none;border:none;color:var(--muted);font-size:12.5px;margin-right:10px;padding:0;}
+  .row-actions button:hover{color:var(--accent-dark);text-decoration:underline;}
+  .row-actions button.del:hover{color:var(--danger);}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .btn-add{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:9px 16px;font-size:13.5px;font-weight:500;}
+  .btn-add:hover{background:var(--accent-dark);}
+
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:20px;border-bottom:1px solid var(--line);}
+  .form-grid .full{grid-column:1/-1;}
+  .form-grid label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;}
+  .form-grid input,.form-grid select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);font-size:14px;background:#fff;color:var(--ink);}
+  .form-actions{grid-column:1/-1;display:flex;gap:10px;margin-top:2px;}
+  .btn-save{background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:8px 16px;font-size:13.5px;}
+  .btn-cancel{background:none;border:1px solid var(--line);border-radius:var(--radius);padding:8px 16px;font-size:13.5px;color:var(--muted);}
+  .form-err{grid-column:1/-1;color:var(--danger);font-size:13px;display:none;}
+
+  .empty-panel{padding:60px 20px;text-align:center;color:var(--muted);}
+  .empty-panel .glyph{font-family:'Source Serif 4',serif;font-size:34px;color:var(--line);margin-bottom:10px;}
+  .empty-panel p{max-width:320px;margin:0 auto;font-size:13.5px;}
+
+  .profile-panel{padding:26px 28px;max-width:460px;}
+  .profile-row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);font-size:14px;}
+  .profile-row:last-child{border-bottom:none;}
+  .profile-row .k{color:var(--muted);}
+  .profile-row .v{font-weight:500;}
+
+  .status-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11.5px;}
+  .status-tag.sap_dien_ra{background:#E8EDE3;color:#5C7047;}
+  .status-tag.dang_dien_ra{background:#E1EBE7;color:var(--accent-dark);}
+  .status-tag.da_xong{background:#EDEDEA;color:var(--muted);}
+
+  .tabs{display:flex;gap:4px;margin-bottom:18px;border-bottom:1px solid var(--line);}
+  .tab-btn{background:none;border:none;padding:9px 14px;font-size:13.5px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .tab-btn.active{color:var(--accent-dark);border-bottom-color:var(--accent);font-weight:500;}
+
+  .course-card{padding:18px 20px;border-bottom:1px solid var(--line);}
+  .course-card:last-child{border-bottom:none;}
+  .course-card .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .course-card .ten{font-size:15.5px;font-weight:600;font-family:'Source Serif 4',serif;}
+  .course-card .meta{color:var(--muted);font-size:12.5px;margin-top:4px;}
+  .course-card .mota{font-size:13.5px;margin-top:8px;color:var(--ink);}
+
+  .cert-status{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11.5px;}
+  .cert-status.cho_duyet{background:#F3E9D2;color:#8A6A1F;}
+  .cert-status.da_duyet{background:#E1EBE7;color:var(--accent-dark);}
+  .cert-status.tu_choi{background:#F3DFDA;color:var(--danger);}
+  .exp-badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;margin-left:6px;}
+  .exp-badge.expired{background:#F3DFDA;color:var(--danger);}
+  .exp-badge.soon{background:#F3E9D2;color:#8A6A1F;}
+  .cert-card{padding:16px 20px;border-bottom:1px solid var(--line);}
+  .cert-card:last-child{border-bottom:none;}
+  .cert-card .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .cert-card .ten{font-size:15px;font-weight:600;font-family:'Source Serif 4',serif;}
+  .cert-card .meta{color:var(--muted);font-size:12.5px;margin-top:4px;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+  .kpi-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;}
+  .kpi-card .val{font-family:'Source Serif 4',serif;font-size:28px;font-weight:600;color:var(--accent-dark);}
+  .kpi-card .val.warn{color:var(--gold);}
+  .kpi-card .val.bad{color:var(--danger);}
+  .kpi-card .lbl{font-size:12.5px;color:var(--muted);margin-top:4px;}
+  .bar-row{display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--line);}
+  .bar-row:last-child{border-bottom:none;}
+  .bar-row .name{width:190px;flex-shrink:0;font-size:13px;}
+  .bar-track{flex:1;height:10px;background:var(--bg);border-radius:20px;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--accent);border-radius:20px;}
+  .bar-row .pct{width:60px;text-align:right;font-size:12.5px;color:var(--muted);flex-shrink:0;}
+  .settings-row{display:flex;gap:14px;align-items:end;padding:16px 20px;flex-wrap:wrap;}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-mark">Bệnh viện Đa khoa Sài Gòn Tam Kỳ</div>
+    <h1>Quản lý đào tạo</h1>
+    <p class="login-sub">Nhập mã số nhân viên để vào hệ thống.</p>
+    <label class="field-label" for="ma-so-input">Mã số nhân viên</label>
+    <input id="ma-so-input" type="text" placeholder="VD: DKTK0163" autocomplete="off">
+    <div id="pw-login-wrap" style="display:none;margin-top:14px;">
+      <label class="field-label" for="mat-khau-input">Mật khẩu</label>
+      <input id="mat-khau-input" type="password" autocomplete="off">
+      <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12.5px;color:var(--muted);">
+        <input type="checkbox" style="width:auto;" onchange="document.getElementById('mat-khau-input').type = this.checked ? 'text' : 'password'"> Hiện mật khẩu
+      </label>
+    </div>
+    <button class="btn-primary" onclick="handleLogin()">Đăng nhập</button>
+    <p class="login-error" id="login-error">Không tìm thấy mã số nhân viên này. Vui lòng liên hệ quản trị viên để được cấp mã.</p>
+  </div>
+</div>
+
+<!-- ============ APP SHELL ============ -->
+<div id="app-screen">
+  <div class="shell">
+    <div class="sidebar">
+      <div class="sidebar-mark">
+        <div class="title">Quản lý đào tạo</div>
+        <div class="sub">Bệnh viện Đa khoa Sài Gòn Tam Kỳ</div>
+        <img src="data:image/png;base64,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zPHDgAbc34MxksSHklkC3gasB54jS+9m2pLf9pt6eFXjO0n9aOAAYBhuWwL3Vtw3YPwFz+5myu2/69YM8pyJQ4jrG3A7DPM9gWG8djLN3HHbAL4Zs+Vk2e2cs/jJnT6v2ScchGcNwAE4wzGrwym3WR7XgS0nsTuZtOCx3gkIZeddOe47FJMLKuY0kd1gkMAg8nec0/wTFcbuWwuYOb6GkVmBjTU1bC4ZoS0yglZOr0IuQNm1NREYNX4ImQ+mEOvwpB6LxW3HRWihZCml1lZq6zcxemhLVTcGqmagOGZoDZnXsrlk1BedxNp4YUN7rwSqIiKSmxLT9zi9RCyvrQ5R+5Hv5jWgY1v0NqBFxSHbmE6E5vWUR+N38XNZmgIpsEkXVkSkf1PnVERERERERAGhiIiIiIiIKCAUERERERERBYQiIiIiIiKigFBEREREREQUEIqIiIiIiIgCQhEREREREVFAKCIiIiIiIgoIRURERERERAGhiIiIiIiIKCAUERERERERBYQiIiIiIiKigFBEREREREQUEIqIiIiIiIgCQhEREREREVFAKCIiIiIiIgoIRURERERERAGhiIiIiIiIKCAUERERERERBYQiIiIiIiKigFBEREREREQUEIqIiIiIiIgCQhEREREREVFAKCIiIiIiooBQREREREREFBCKiIiIiIiIAkIRERERERFRQCgiIiIiIiIKCEVEREREREQBoYiIiIiIiCggFBEREREREQWEIiIiIiIiooBQREREREREFBCKiIiIiIiIAkIRERERERFRQCgiIiIiIiIKCEVEREREREQBoYiIiIiIiCggFBEREREREQWEIiIiIiIiooBQREREREREFBCKiIiIiIiIAkIRERERERFRQCgiIiIiIiIKCEVEREREREQBoYiIiIiIiCggFBERERERUUCoIhAREREREVFAKCIiIiIiIgoIRURERERERAGhiIiIiIiIKCAUERERERERBYQiIiIiIiKigFBEREREREQUEIqIiIiIiIgCQhEREREREVFAKCIiIiIiIgoIRURERERERAGhiIiIiIiIKCAUERERERERBYQiIiIiIiKigFBEREREREQUEIqIiIiIiIgCQhEREREREVFAKCIiIiIiIgoIRURERERERAGhiIiIiIiIKCAUERERERERBYQiIiIiIiKigFBEREREREQUEIqIiIiIiCggFBEREREREQWEIiIiIiIiooBQREREREREFBCKiIiIiIiIAkLpEsNUCPJqfXDVBxERERFRQLjbiNamQpByMAhY0qKCEBEREREFhLtPCd9FGltJNDG0WysEiP4XsuS3KgwRERER6TfdVBVBD1v93BJGvXkGkfOpSQbjKpLdUpatJPoFTJv/ZxWGiIiIiPQXmrbqDT+fmLBy/TE4HwEfpALZnQRwVmMsYGrzQyoPEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREame/w+iEOKu7iO6xgAAAABJRU5ErkJggg==" alt="Bệnh viện Đa khoa Sài Gòn Tam Kỳ" style="display:block;width:100%;max-width:180px;height:auto;margin-top:12px;">
+      </div>
+      <nav class="nav" id="nav-list"></nav>
+      <div class="sidebar-user">
+        <div class="name" id="sb-name"></div>
+        <div class="role" id="sb-role"></div>
+        <button onclick="handleLogout()">Đăng xuất</button>
+      </div>
+    </div>
+    <div class="main" id="main-content"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://pqceeqcutkphvmyqsmyt.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_knTv2RfDtF2RySEyqIJ3WQ_uqPwF7HZ';
+
+async function sb(path, options = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': options.prefer || 'return=representation',
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || `Lỗi kết nối (${res.status})`);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+let currentUser = null;
+let currentSection = null;
+
+const ADMIN_NAV = [
+  { key: 'users', label: 'Người dùng' },
+  { key: 'courses', label: 'Chương trình đào tạo' },
+  { key: 'my-courses', label: 'Khoá học của tôi' },
+  { key: 'certs', label: 'Chứng chỉ học viên' },
+  { key: 'my-profile', label: 'Hồ sơ của tôi' },
+  { key: 'overview', label: 'Tổng quan CME' },
+  { key: 'exams', label: 'Bài kiểm tra', disabled: true },
+];
+const HOCVIEN_NAV = [
+  { key: 'my-courses', label: 'Khoá học của tôi' },
+  { key: 'my-exams', label: 'Bài kiểm tra của tôi', disabled: true },
+  { key: 'my-certs', label: 'Chứng nhận của tôi' },
+  { key: 'my-profile', label: 'Hồ sơ của tôi' },
+];
+
+const TRANG_THAI_LABEL = { sap_dien_ra: 'Sắp diễn ra', dang_dien_ra: 'Đang diễn ra', da_xong: 'Đã xong' };
+
+const USER_COLS = 'id,ma_so_nhan_vien,ho_ten,phong_khoa,chuc_vu,so_dien_thoai,vai_tro,created_at,trang_thai,theo_doi_cme';
+
+// ---------- Helper đọc file Excel ----------
+function normKey(k) {
+  return String(k).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function readExcelFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        resolve(XLSX.utils.sheet_to_json(ws, { defval: '' }));
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('Không đọc được file.'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function chunkArray(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+async function handleLogin() {
+  const input = document.getElementById('ma-so-input');
+  const errEl = document.getElementById('login-error');
+  const pwWrap = document.getElementById('pw-login-wrap');
+  const code = input.value.trim().toUpperCase();
+  const mk = document.getElementById('mat-khau-input').value.trim();
+  errEl.style.display = 'none';
+  if (!code) return;
+  try {
+    const rows = await sb('rpc/dt_login', { method: 'POST', body: JSON.stringify({ p_ma_so: code, p_mat_khau: mk || null }) });
+    if (!rows || rows.length === 0) {
+      errEl.textContent = 'Không tìm thấy mã số nhân viên này. Vui lòng liên hệ quản trị viên để được cấp mã.';
+      errEl.style.display = 'block';
+      return;
+    }
+    currentUser = rows[0];
+    enterApp();
+  } catch (e) {
+    const msg = String(e.message || '');
+    if (msg.includes('NEEDS_PASSWORD')) {
+      pwWrap.style.display = 'block';
+      document.getElementById('mat-khau-input').focus();
+      errEl.textContent = mk ? 'Sai mật khẩu. Vui lòng thử lại.' : 'Tài khoản này yêu cầu mật khẩu. Vui lòng nhập mật khẩu.';
+      errEl.style.display = 'block';
+    } else if (msg.includes('ACCOUNT_DISABLED')) {
+      errEl.textContent = 'Tài khoản này đã bị ngừng hoạt động. Vui lòng liên hệ quản trị viên.';
+      errEl.style.display = 'block';
+    } else if (msg.includes('NOT_FOUND')) {
+      errEl.textContent = 'Không tìm thấy mã số nhân viên này. Vui lòng liên hệ quản trị viên để được cấp mã.';
+      errEl.style.display = 'block';
+    } else {
+      errEl.textContent = 'Không kết nối được hệ thống. Chi tiết lỗi: ' + msg.slice(0, 300);
+      errEl.style.display = 'block';
+    }
+  }
+}
+
+document.getElementById('ma-so-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleLogin();
+});
+document.getElementById('mat-khau-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleLogin();
+});
+
+function handleLogout() {
+  currentUser = null;
+  currentSection = null;
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('ma-so-input').value = '';
+  document.getElementById('mat-khau-input').value = '';
+  document.getElementById('pw-login-wrap').style.display = 'none';
+}
+
+function enterApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  document.getElementById('sb-name').textContent = currentUser.ho_ten;
+  document.getElementById('sb-role').textContent = currentUser.vai_tro === 'admin' ? 'Quản trị viên' : 'Học viên';
+  const nav = currentUser.vai_tro === 'admin' ? ADMIN_NAV : HOCVIEN_NAV;
+  renderNav(nav);
+  goToSection(nav[0].key, nav);
+}
+
+function renderNav(nav) {
+  const el = document.getElementById('nav-list');
+  el.innerHTML = '';
+  nav.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'nav-item' + (item.disabled ? ' disabled' : '');
+    btn.textContent = item.label;
+    btn.onclick = () => { if (!item.disabled) goToSection(item.key, nav); };
+    btn.dataset.key = item.key;
+    el.appendChild(btn);
+  });
+}
+
+function goToSection(key, nav) {
+  currentSection = key;
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.key === key));
+  const item = nav.find(n => n.key === key);
+  const main = document.getElementById('main-content');
+  if (key === 'users') return renderUsersSection(main);
+  if (key === 'courses') return renderCoursesSection(main);
+  if (key === 'certs') return renderCertsAdminSection(main);
+  if (key === 'overview') return renderOverviewSection(main);
+  if (key === 'my-certs') return renderMyCertsSection(main);
+  if (key === 'my-courses') return renderMyCoursesSection(main);
+  if (key === 'my-profile') return renderProfileSection(main);
+  main.innerHTML = `
+    <h2>${item.label}</h2>
+    <p class="desc">Phân hệ này chưa hoạt động.</p>
+    <div class="panel empty-panel">
+      <div class="glyph">···</div>
+      <p>Phân hệ "${item.label}" đang được xây dựng, sẽ có trong bước tiếp theo.</p>
+    </div>`;
+}
+
+// ---------- Hồ sơ của tôi (mọi vai trò, tự xem & sửa) ----------
+async function renderProfileSection(main) {
+  const u = currentUser;
+  main.innerHTML = `
+    <h2>Hồ sơ của tôi</h2>
+    <p class="desc">Chị có thể tự cập nhật các thông tin bên dưới.</p>
+    <div class="panel profile-panel" style="max-width:460px;">
+      <div class="profile-row"><span class="k">Mã số nhân viên</span><span class="v">${u.ma_so_nhan_vien}</span></div>
+      <div class="profile-row"><span class="k">Vai trò</span><span class="v">${u.vai_tro === 'admin' ? 'Quản trị viên' : 'Học viên'}</span></div>
+    </div>
+    <div class="panel" style="max-width:460px;margin-top:16px;">
+      <div class="form-grid" style="grid-template-columns:1fr;">
+        <p class="form-err" id="profile-err"></p>
+        <div><label>Họ tên</label><input id="p-hoten" value="${u.ho_ten}"></div>
+        <div><label>Phòng/Khoa</label><input id="p-phongkhoa" value="${u.phong_khoa || ''}"></div>
+        <div><label>Chức vụ</label><input id="p-chucvu" value="${u.chuc_vu || ''}"></div>
+        <div><label>Số điện thoại</label><input id="p-sdt" value="${u.so_dien_thoai || ''}"></div>
+        <div class="form-actions"><button class="btn-save" onclick="saveOwnProfile()">Lưu thay đổi</button></div>
+      </div>
+    </div>
+
+    <h3 style="font-size:16px;margin:28px 0 4px;">Chứng chỉ của tôi</h3>
+    <p class="desc" style="margin-top:0;">Chứng chỉ do đơn vị cấp và chứng chỉ tự thêm.</p>
+    <div class="toolbar"><span></span><button class="btn-add" onclick="toggleMyCertForm()">Thêm chứng chỉ của tôi</button></div>
+    <div id="my-cert-form-holder"></div>
+    <div class="panel" id="my-certs-panel"><div class="empty-panel" style="color:var(--muted)">Đang tải...</div></div>`;
+  await loadMyCerts();
+}
+
+async function saveOwnProfile() {
+  const errEl = document.getElementById('profile-err');
+  errEl.style.display = 'none';
+  const hoten = document.getElementById('p-hoten').value.trim();
+  if (!hoten) { errEl.textContent = 'Họ tên không được để trống.'; errEl.style.display = 'block'; return; }
+  const payload = {
+    ho_ten: hoten,
+    phong_khoa: document.getElementById('p-phongkhoa').value.trim() || null,
+    chuc_vu: document.getElementById('p-chucvu').value.trim() || null,
+    so_dien_thoai: document.getElementById('p-sdt').value.trim() || null
+  };
+  try {
+    await sb(`dt_user_profiles?id=eq.${currentUser.id}`, { method: 'PATCH', body: JSON.stringify(payload), prefer: 'return=minimal' });
+    currentUser = { ...currentUser, ...payload };
+    document.getElementById('sb-name').textContent = currentUser.ho_ten;
+    errEl.style.display = 'none';
+    const btn = document.querySelector('.btn-save');
+    if (btn) { const old = btn.textContent; btn.textContent = 'Đã lưu ✓'; setTimeout(() => { if (btn) btn.textContent = old; }, 1500); }
+  } catch (e) {
+    errEl.textContent = 'Có lỗi xảy ra: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ---------- Chương trình đào tạo (admin) ----------
+let editingCourseId = null;
+
+async function renderCoursesSection(main) {
+  main.innerHTML = `
+    <h2>Chương trình đào tạo</h2>
+    <p class="desc">Tạo và quản lý các khoá đào tạo. Học viên sẽ thấy các khoá "Đang diễn ra" và "Đã xong" trong mục Khoá học của tôi.</p>
+    <div class="toolbar">
+      <span></span>
+      <button class="btn-add" onclick="toggleCourseForm()">Thêm khoá học</button>
+    </div>
+    <div class="panel" id="courses-panel">
+      <div id="course-form-holder"></div>
+      <table>
+        <thead><tr>
+          <th>Tên khoá</th><th>Giảng viên</th><th>Số giờ</th><th>Thời gian</th><th>Đăng ký</th><th>Trạng thái</th><th></th>
+        </tr></thead>
+        <tbody id="courses-tbody"><tr><td colspan="7" style="color:var(--muted)">Đang tải...</td></tr></tbody>
+      </table>
+    </div>`;
+  await loadCourses();
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y, m, day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+async function loadCourses() {
+  const tbody = document.getElementById('courses-tbody');
+  try {
+    const [rows, enrollRows] = await Promise.all([
+      sb('dt_courses?select=*&order=ngay_bat_dau.desc'),
+      sb('dt_course_enrollments?select=course_id')
+    ]);
+    const countByCourse = {};
+    enrollRows.forEach(e => { countByCourse[e.course_id] = (countByCourse[e.course_id] || 0) + 1; });
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="color:var(--muted)">Chưa có khoá học nào. Bấm "Thêm khoá học" để bắt đầu.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows.map(c => `
+      <tr>
+        <td>${c.ten_khoa}</td>
+        <td>${c.giang_vien || '—'}</td>
+        <td>${c.so_gio != null ? c.so_gio : '—'}</td>
+        <td>${fmtDate(c.ngay_bat_dau)} – ${fmtDate(c.ngay_ket_thuc)}</td>
+        <td style="text-align:center;">${countByCourse[c.id] || 0}</td>
+        <td><span class="status-tag ${c.trang_thai}">${TRANG_THAI_LABEL[c.trang_thai]}</span></td>
+        <td class="row-actions">
+          <button onclick='openCourseDetail(${JSON.stringify(c)})'>Chi tiết</button>
+          <button onclick='editCourse(${JSON.stringify(c)})'>Sửa</button>
+          <button class="del" onclick="deleteCourse('${c.id}','${c.ten_khoa.replace(/'/g,"\\'")}')">Xoá</button>
+        </td>
+      </tr>`).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" style="color:var(--danger)">Không tải được danh sách. ${e.message}</td></tr>`;
+  }
+}
+
+function buoiHocToArray(buoiHoc, count) {
+  const arr = [];
+  for (let i = 1; i <= count; i++) {
+    const found = (buoiHoc || []).find(x => x.buoi === i);
+    arr.push(found && found.link ? found.link : '');
+  }
+  return arr;
+}
+
+function buoiLinksHTML(count, links) {
+  let html = '';
+  for (let i = 1; i <= count; i++) {
+    const val = (links[i - 1] || '').replace(/"/g, '&quot;');
+    html += `<div><label>Link điểm danh buổi ${i}</label><input id="c-buoi-link-${i}" value="${val}" placeholder="https://..."></div>`;
+  }
+  return html;
+}
+
+function onSoBuoiChange() {
+  const count = Math.max(1, parseInt(document.getElementById('c-sobuoi').value) || 1);
+  const container = document.getElementById('c-buoi-links-container');
+  const existing = [];
+  container.querySelectorAll('input').forEach((inp, idx) => existing[idx] = inp.value);
+  container.innerHTML = buoiLinksHTML(count, existing);
+}
+
+let courseUserMap = {};
+
+async function toggleCourseForm(course) {
+  const holder = document.getElementById('course-form-holder');
+  if (holder.innerHTML && !course) { holder.innerHTML = ''; editingCourseId = null; return; }
+  editingCourseId = course ? course.id : null;
+  const initCount = course && course.so_buoi_hoc ? course.so_buoi_hoc : 1;
+  const initLinks = buoiHocToArray(course ? course.buoi_hoc : [], initCount);
+  const users = await sb(`dt_user_profiles?select=id,ma_so_nhan_vien,ho_ten&order=ho_ten.asc`);
+  courseUserMap = {};
+  users.forEach(u => courseUserMap[u.ma_so_nhan_vien] = u);
+  const currentGiangVienVal = course && course.giang_vien_id
+    ? (() => { const u = users.find(x => x.id === course.giang_vien_id); return u ? `${u.ma_so_nhan_vien} — ${u.ho_ten}` : (course.giang_vien || ''); })()
+    : (course && course.giang_vien ? course.giang_vien : '');
+  holder.innerHTML = `
+    <div class="form-grid">
+      <p class="form-err" id="course-form-err"></p>
+      <div class="full"><label>Tên khoá học *</label><input id="c-ten" value="${course ? course.ten_khoa : ''}"></div>
+      <div class="full"><label>Mô tả</label><input id="c-mota" value="${course && course.mo_ta ? course.mo_ta : ''}"></div>
+      <div><label>Địa điểm</label><input id="c-diadiem" value="${course && course.dia_diem ? course.dia_diem : ''}" placeholder="VD: Hội trường tầng 3"></div>
+      <div class="full"><label>Giảng viên phụ trách (gõ mã số/tên nếu là người dùng có sẵn, hoặc để tên tự do)</label>
+        <input id="c-giangvien" list="c-giangvien-datalist" value="${currentGiangVienVal.replace(/"/g, '&quot;')}">
+        <datalist id="c-giangvien-datalist">${users.map(u => `<option value="${u.ma_so_nhan_vien} — ${u.ho_ten}">`).join('')}</datalist>
+      </div>
+      <div><label>Số giờ đào tạo</label><input id="c-sogio" type="number" step="0.5" value="${course && course.so_gio != null ? course.so_gio : ''}"></div>
+      <div><label>Ngày bắt đầu</label><input id="c-batdau" type="date" value="${course && course.ngay_bat_dau ? course.ngay_bat_dau : ''}"></div>
+      <div><label>Ngày kết thúc</label><input id="c-ketthuc" type="date" value="${course && course.ngay_ket_thuc ? course.ngay_ket_thuc : ''}"></div>
+      <div><label>Số buổi học</label><input id="c-sobuoi" type="number" min="1" value="${initCount}" oninput="onSoBuoiChange()"></div>
+      <div class="full">
+        <label>Link điểm danh từng buổi</label>
+        <div id="c-buoi-links-container" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">${buoiLinksHTML(initCount, initLinks)}</div>
+      </div>
+      <div class="full"><label>Điều kiện cấp CME</label><input id="c-dieukiencme" value="${course && course.dieu_kien_cme ? course.dieu_kien_cme : ''}" placeholder="VD: Tham dự tối thiểu 80% số buổi, làm bài đánh giá cuối khoá"></div>
+      <div><label>Trạng thái</label>
+        <select id="c-trangthai">
+          <option value="sap_dien_ra" ${course && course.trang_thai === 'sap_dien_ra' ? 'selected' : ''}>Sắp diễn ra</option>
+          <option value="dang_dien_ra" ${course && course.trang_thai === 'dang_dien_ra' ? 'selected' : ''}>Đang diễn ra</option>
+          <option value="da_xong" ${course && course.trang_thai === 'da_xong' ? 'selected' : ''}>Đã xong</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button class="btn-save" onclick="saveCourse()">Lưu</button>
+        <button class="btn-cancel" onclick="toggleCourseForm()">Huỷ</button>
+      </div>
+    </div>`;
+}
+
+function editCourse(course) { toggleCourseForm(course); }
+
+async function saveCourse() {
+  const errEl = document.getElementById('course-form-err');
+  errEl.style.display = 'none';
+  const ten = document.getElementById('c-ten').value.trim();
+  if (!ten) {
+    errEl.textContent = 'Vui lòng nhập tên khoá học.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const soBuoi = Math.max(1, parseInt(document.getElementById('c-sobuoi').value) || 1);
+  const buoiHoc = [];
+  for (let i = 1; i <= soBuoi; i++) {
+    const linkInput = document.getElementById(`c-buoi-link-${i}`);
+    const linkVal = linkInput ? linkInput.value.trim() : '';
+    buoiHoc.push({ buoi: i, link: linkVal || null });
+  }
+  const giangVienVal = document.getElementById('c-giangvien').value.trim();
+  const gvMaso = giangVienVal.split('—')[0].trim().toUpperCase();
+  const matchedGv = courseUserMap[gvMaso];
+  const payload = {
+    ten_khoa: ten,
+    mo_ta: document.getElementById('c-mota').value.trim() || null,
+    dia_diem: document.getElementById('c-diadiem').value.trim() || null,
+    dieu_kien_cme: document.getElementById('c-dieukiencme').value.trim() || null,
+    giang_vien: matchedGv ? matchedGv.ho_ten : (giangVienVal || null),
+    giang_vien_id: matchedGv ? matchedGv.id : null,
+    so_gio: document.getElementById('c-sogio').value ? Number(document.getElementById('c-sogio').value) : null,
+    ngay_bat_dau: document.getElementById('c-batdau').value || null,
+    ngay_ket_thuc: document.getElementById('c-ketthuc').value || null,
+    so_buoi_hoc: soBuoi,
+    buoi_hoc: buoiHoc,
+    trang_thai: document.getElementById('c-trangthai').value
+  };
+  try {
+    if (editingCourseId) {
+      await sb(`dt_courses?id=eq.${editingCourseId}`, { method: 'PATCH', body: JSON.stringify(payload) });
+    } else {
+      await sb('dt_courses', { method: 'POST', body: JSON.stringify(payload) });
+    }
+    editingCourseId = null;
+    await renderCoursesSection(document.getElementById('main-content'));
+  } catch (e) {
+    errEl.textContent = 'Có lỗi xảy ra: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function deleteCourse(id, name) {
+  if (!confirm(`Xoá khoá học "${name}"? Hành động này không thể hoàn tác.`)) return;
+  try {
+    await sb(`dt_courses?id=eq.${id}`, { method: 'DELETE' });
+    await loadCourses();
+  } catch (e) {
+    alert('Không xoá được: ' + e.message);
+  }
+}
+
+// ---------- Chi tiết khoá học: tài liệu + danh sách học viên (admin) ----------
+async function openCourseDetail(course) {
+  const main = document.getElementById('main-content');
+  main.innerHTML = `
+    <button class="btn-cancel" style="margin-bottom:18px" onclick="renderCoursesSection(document.getElementById('main-content'))">← Quay lại danh sách</button>
+    <h2>${course.ten_khoa}</h2>
+    <p class="desc">${course.giang_vien ? 'GV: ' + course.giang_vien + ' · ' : ''}${fmtDate(course.ngay_bat_dau)} – ${fmtDate(course.ngay_ket_thuc)}${course.dia_diem ? ' · ' + course.dia_diem : ''}</p>
+    ${course.dieu_kien_cme ? `<p class="desc" style="margin-top:-8px;color:var(--gold);">Điều kiện cấp CME: ${course.dieu_kien_cme}</p>` : ''}
+
+    <h3 style="font-size:16px;margin:24px 0 10px;">Tài liệu học tập</h3>
+    <div class="panel" id="materials-panel">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
+        <div><label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;">Tên tài liệu</label>
+          <input id="mat-ten" style="padding:8px 10px;border:1px solid var(--line);border-radius:3px;font-size:14px;" placeholder="VD: Slide bài giảng"></div>
+        <div><label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;">Chọn file</label>
+          <input id="mat-file" type="file"></div>
+        <button class="btn-save" onclick="uploadMaterial('${course.id}')">Tải lên</button>
+      </div>
+      <p class="form-err" id="mat-err" style="padding:12px 20px 0;"></p>
+      <div id="materials-list"><div style="padding:16px 20px;color:var(--muted)">Đang tải...</div></div>
+    </div>
+
+    <h3 style="font-size:16px;margin:26px 0 10px;">Danh sách học viên tham gia</h3>
+    <p class="desc" style="margin-top:-4px;">Chỉ để theo dõi/tham chiếu — mọi học viên vẫn tự thấy khoá học này trong app.</p>
+    <div class="panel" id="roster-panel">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
+        <div><label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;">Mã số nhân viên</label>
+          <input id="roster-maso" style="padding:8px 10px;border:1px solid var(--line);border-radius:3px;font-size:14px;" placeholder="VD: DKTK0163"></div>
+        <button class="btn-save" onclick="addRosterOne('${course.id}')">Thêm</button>
+      </div>
+      <div style="padding:16px 20px;border-bottom:1px solid var(--line);">
+        <label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;">Hoặc dán nhiều mã số (mỗi dòng 1 mã)</label>
+        <textarea id="roster-bulk" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:3px;font-size:14px;font-family:inherit;" placeholder="DKTK0163&#10;DKTK0164"></textarea>
+        <button class="btn-save" style="margin-top:8px" onclick="addRosterBulk('${course.id}')">Thêm hàng loạt</button>
+      </div>
+      <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:10px;">
+        <button class="btn-cancel" onclick="downloadRosterTemplate()">Tải file mẫu</button>
+        <button class="btn-cancel" onclick="document.getElementById('roster-excel-input').click()">Nhập từ Excel</button>
+        <input type="file" id="roster-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleRosterExcelImport(event,'${course.id}')">
+      </div>
+      <p class="form-err" id="roster-err" style="padding:12px 20px 0;"></p>
+      <div id="roster-list"><div style="padding:16px 20px;color:var(--muted)">Đang tải...</div></div>
+    </div>
+
+    <h3 style="font-size:16px;margin:26px 0 10px;">Học viên đã đăng ký học (tự đăng ký qua app)</h3>
+    <div class="panel" id="enroll-panel"><div style="padding:16px 20px;color:var(--muted)">Đang tải...</div></div>
+
+    <h3 style="font-size:16px;margin:26px 0 10px;">Bài kiểm tra</h3>
+    <p class="desc" style="margin-top:-4px;">Dán link bài thi (Google Form/Microsoft Form) — hệ thống tự tạo mã QR để in hoặc chiếu lên màn hình.</p>
+    <div class="panel" id="exams-panel">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
+        <div><label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;">Tên bài kiểm tra</label>
+          <input id="exam-ten" style="padding:8px 10px;border:1px solid var(--line);border-radius:3px;font-size:14px;" placeholder="VD: Bài test cuối khoá"></div>
+        <div><label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;">Link bài thi</label>
+          <input id="exam-link" style="padding:8px 10px;border:1px solid var(--line);border-radius:3px;font-size:14px;width:280px;" placeholder="https://forms.office.com/..."></div>
+        <button class="btn-save" onclick="addExam('${course.id}')">Thêm</button>
+      </div>
+      <p class="form-err" id="exam-err" style="padding:12px 20px 0;"></p>
+      <div id="exams-list"><div style="padding:16px 20px;color:var(--muted)">Đang tải...</div></div>
+    </div>`;
+  await loadMaterials(course.id);
+  await loadRoster(course.id);
+  await loadEnrollments(course.id);
+  await loadExams(course.id);
+}
+
+async function loadExams(courseId) {
+  const el = document.getElementById('exams-list');
+  try {
+    const rows = await sb(`dt_course_exams?course_id=eq.${courseId}&select=*&order=created_at.desc`);
+    if (!rows.length) { el.innerHTML = `<div style="padding:16px 20px;color:var(--muted)">Chưa có bài kiểm tra nào.</div>`; return; }
+    el.innerHTML = rows.map(ex => `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(ex.link_bai)}" width="70" height="70" style="border:1px solid var(--line);border-radius:3px;" alt="QR">
+          <div>
+            <a href="${ex.link_bai}" target="_blank" style="color:var(--accent-dark);font-size:13.5px;font-weight:500;">${ex.ten_bai}</a>
+            <div style="color:var(--muted);font-size:12px;margin-top:2px;max-width:320px;word-break:break-all;">${ex.link_bai}</div>
+          </div>
+        </div>
+        <button style="background:none;border:none;color:var(--muted);font-size:12.5px;" onclick="deleteExam('${ex.id}','${courseId}')">Xoá</button>
+      </div>`).join('');
+  } catch (e) { el.innerHTML = `<div style="padding:16px 20px;color:var(--danger)">Không tải được: ${e.message}</div>`; }
+}
+
+async function addExam(courseId) {
+  const errEl = document.getElementById('exam-err');
+  errEl.style.display = 'none';
+  const ten = document.getElementById('exam-ten').value.trim();
+  const link = document.getElementById('exam-link').value.trim();
+  if (!ten || !link) { errEl.textContent = 'Vui lòng nhập tên bài và link bài thi.'; errEl.style.display = 'block'; return; }
+  try {
+    await sb('dt_course_exams', { method: 'POST', body: JSON.stringify({ course_id: courseId, ten_bai: ten, link_bai: link }), prefer: 'return=minimal' });
+    document.getElementById('exam-ten').value = '';
+    document.getElementById('exam-link').value = '';
+    await loadExams(courseId);
+  } catch (e) {
+    errEl.textContent = 'Có lỗi xảy ra: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function deleteExam(id, courseId) {
+  if (!confirm('Xoá bài kiểm tra này?')) return;
+  try {
+    await sb(`dt_course_exams?id=eq.${id}`, { method: 'DELETE', prefer: 'return=minimal' });
+    await loadExams(courseId);
+  } catch (e) { alert('Không xoá được: ' + e.message); }
+}
+
+async function loadEnrollments(courseId) {
+  const el = document.getElementById('enroll-panel');
+  try {
+    const rows = await sb(`dt_course_enrollments?course_id=eq.${courseId}&select=id,registered_at,hoso:dt_user_profiles(ho_ten,ma_so_nhan_vien,phong_khoa)&order=registered_at.asc`);
+    if (!rows.length) { el.innerHTML = `<div style="padding:16px 20px;color:var(--muted)">Chưa có ai đăng ký.</div>`; return; }
+    el.innerHTML = `<table>
+      <thead><tr><th>Họ tên</th><th>Mã số NV</th><th>Phòng/Khoa</th><th>Ngày đăng ký</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${r.hoso ? r.hoso.ho_ten : '—'}</td><td>${r.hoso ? r.hoso.ma_so_nhan_vien : '—'}</td><td>${r.hoso && r.hoso.phong_khoa ? r.hoso.phong_khoa : '—'}</td><td>${fmtDate(r.registered_at ? r.registered_at.slice(0,10) : null)}</td></tr>`).join('')}</tbody>
+    </table>`;
+  } catch (e) {
+    el.innerHTML = `<div style="padding:16px 20px;color:var(--danger)">Không tải được: ${e.message}</div>`;
+  }
+}
+
+async function loadMaterials(courseId) {
+  const el = document.getElementById('materials-list');
+  try {
+    const rows = await sb(`dt_course_materials?course_id=eq.${courseId}&select=*&order=uploaded_at.desc`);
+    if (!rows.length) { el.innerHTML = `<div style="padding:16px 20px;color:var(--muted)">Chưa có tài liệu nào.</div>`; return; }
+    el.innerHTML = rows.map(m => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid var(--line);">
+        <a href="${m.file_url}" target="_blank" style="color:var(--accent-dark);font-size:13.5px;">${m.ten_tai_lieu}</a>
+        <button style="background:none;border:none;color:var(--muted);font-size:12.5px;" onclick="deleteMaterial('${m.id}','${courseId}')">Xoá</button>
+      </div>`).join('');
+  } catch (e) { el.innerHTML = `<div style="padding:16px 20px;color:var(--danger)">Không tải được: ${e.message}</div>`; }
+}
+
+async function uploadMaterial(courseId) {
+  const errEl = document.getElementById('mat-err');
+  errEl.style.display = 'none';
+  const ten = document.getElementById('mat-ten').value.trim();
+  const fileInput = document.getElementById('mat-file');
+  const file = fileInput.files[0];
+  if (!ten || !file) { errEl.textContent = 'Vui lòng nhập tên tài liệu và chọn file.'; errEl.style.display = 'block'; return; }
+  try {
+    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const path = `${courseId}/${Date.now()}_${safeName}`;
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/dt-tai-lieu/${path}`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    });
+    if (!uploadRes.ok) throw new Error(await uploadRes.text());
+    const fileUrl = `${SUPABASE_URL}/storage/v1/object/public/dt-tai-lieu/${path}`;
+    await sb('dt_course_materials', { method: 'POST', body: JSON.stringify({ course_id: courseId, ten_tai_lieu: ten, file_url: fileUrl, file_path: path }) });
+    document.getElementById('mat-ten').value = '';
+    fileInput.value = '';
+    await loadMaterials(courseId);
+  } catch (e) {
+    errEl.textContent = 'Tải lên thất bại: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function deleteMaterial(id, courseId) {
+  if (!confirm('Xoá tài liệu này?')) return;
+  try {
+    await sb(`dt_course_materials?id=eq.${id}`, { method: 'DELETE' });
+    await loadMaterials(courseId);
+  } catch (e) { alert('Không xoá được: ' + e.message); }
+}
+
+async function loadRoster(courseId) {
+  const el = document.getElementById('roster-list');
+  try {
+    const rows = await sb(`dt_course_roster?course_id=eq.${courseId}&select=*&order=added_at.desc`);
+    if (!rows.length) { el.innerHTML = `<div style="padding:16px 20px;color:var(--muted)">Chưa có ai trong danh sách.</div>`; return; }
+    el.innerHTML = `<table><thead><tr><th>Mã số NV</th><th>Họ tên</th><th></th></tr></thead><tbody>` +
+      rows.map(r => `<tr><td>${r.ma_so_nhan_vien}</td><td>${r.ho_ten || '—'}</td><td class="row-actions"><button class="del" onclick="deleteRosterItem('${r.id}','${courseId}')">Xoá</button></td></tr>`).join('') +
+      `</tbody></table>`;
+  } catch (e) { el.innerHTML = `<div style="padding:16px 20px;color:var(--danger)">Không tải được: ${e.message}</div>`; }
+}
+
+async function addRosterOne(courseId) {
+  const errEl = document.getElementById('roster-err');
+  errEl.style.display = 'none';
+  const maso = document.getElementById('roster-maso').value.trim().toUpperCase();
+  if (!maso) return;
+  try {
+    await addRosterCodes(courseId, [maso]);
+    document.getElementById('roster-maso').value = '';
+    await loadRoster(courseId);
+  } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+}
+
+async function addRosterBulk(courseId) {
+  const errEl = document.getElementById('roster-err');
+  errEl.style.display = 'none';
+  const raw = document.getElementById('roster-bulk').value;
+  const codes = raw.split(/[\n,]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+  if (!codes.length) return;
+  try {
+    await addRosterCodes(courseId, codes);
+    document.getElementById('roster-bulk').value = '';
+    await loadRoster(courseId);
+  } catch (e) { errEl.textContent = e.message; errEl.style.display = 'block'; }
+}
+
+async function addRosterCodes(courseId, codes) {
+  let nameMap = {};
+  try {
+    const found = await sb(`dt_user_profiles?ma_so_nhan_vien=in.(${codes.map(c => `"${c}"`).join(',')})&select=${USER_COLS}`);
+    found.forEach(u => nameMap[u.ma_so_nhan_vien] = u.ho_ten);
+  } catch (e) { /* tiếp tục thêm dù không tra được tên */ }
+  const rows = codes.map(c => ({ course_id: courseId, ma_so_nhan_vien: c, ho_ten: nameMap[c] || null }));
+  for (const chunk of chunkArray(rows, 200)) {
+    await sb('dt_course_roster?on_conflict=course_id,ma_so_nhan_vien', {
+      method: 'POST',
+      body: JSON.stringify(chunk),
+      prefer: 'resolution=merge-duplicates,return=minimal'
+    });
+  }
+}
+
+function downloadRosterTemplate() {
+  const wsData = [['Mã số nhân viên'], ['DKTK0163'], ['DKTK0164']];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Danh sách');
+  XLSX.writeFile(wb, 'mau_import_danh_sach_hoc_vien.xlsx');
+}
+
+async function handleRosterExcelImport(event, courseId) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  const errEl = document.getElementById('roster-err');
+  errEl.style.display = 'none';
+  try {
+    const rawRows = await readExcelFile(file);
+    const codes = [];
+    rawRows.forEach(row => {
+      for (const key in row) {
+        const nk = normKey(key);
+        if (nk.includes('ma so') || nk.includes('ma nv') || nk === 'ma') {
+          const v = String(row[key]).trim().toUpperCase();
+          if (v) codes.push(v);
+          return;
+        }
+      }
+    });
+    const uniqueCodes = [...new Set(codes)];
+    if (!uniqueCodes.length) {
+      errEl.textContent = 'Không tìm thấy cột "Mã số nhân viên" hợp lệ trong file.';
+      errEl.style.display = 'block';
+      return;
+    }
+    await addRosterCodes(courseId, uniqueCodes);
+    await loadRoster(courseId);
+    alert(`Đã thêm ${uniqueCodes.length} mã số nhân viên vào danh sách.`);
+  } catch (e) {
+    errEl.textContent = 'Nhập thất bại: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function deleteRosterItem(id, courseId) {
+  try {
+    await sb(`dt_course_roster?id=eq.${id}`, { method: 'DELETE' });
+    await loadRoster(courseId);
+  } catch (e) { alert('Không xoá được: ' + e.message); }
+}
+
+// ---------- Khoá học của tôi (học viên) ----------
+let myCoursesTab = 'dang_dien_ra';
+
+async function renderMyCoursesSection(main) {
+  main.innerHTML = `
+    <h2>Khoá học của tôi</h2>
+    <p class="desc">Các khoá đào tạo đang và đã diễn ra.</p>
+    <div class="tabs">
+      <button class="tab-btn" data-tab="dang_dien_ra" onclick="switchMyCoursesTab('dang_dien_ra')">Đang học</button>
+      <button class="tab-btn" data-tab="da_xong" onclick="switchMyCoursesTab('da_xong')">Đã học</button>
+      <button class="tab-btn" data-tab="sap_dien_ra" onclick="switchMyCoursesTab('sap_dien_ra')">Sắp diễn ra</button>
+    </div>
+    <div class="panel" id="my-courses-panel">
+      <div class="empty-panel" style="color:var(--muted)">Đang tải...</div>
+    </div>
+    <div id="my-teaching-section"></div>`;
+  myCoursesTab = 'dang_dien_ra';
+  await loadMyCourses();
+  await loadMyTeachingCourses();
+}
+
+async function loadMyTeachingCourses() {
+  const el = document.getElementById('my-teaching-section');
+  try {
+    const teaching = await sb(`dt_courses?giang_vien_id=eq.${currentUser.id}&select=*`);
+    if (!teaching.length) { el.innerHTML = ''; return; }
+    const enrollRows = await sb('dt_course_enrollments?select=course_id');
+    const countByCourse = {};
+    enrollRows.forEach(e => { countByCourse[e.course_id] = (countByCourse[e.course_id] || 0) + 1; });
+    el.innerHTML = `
+      <h3 style="font-size:16px;margin:26px 0 10px;">Khoá học tôi giảng dạy</h3>
+      <div class="panel">
+        ${teaching.map(c => `
+          <div class="course-card">
+            <div class="top">
+              <span class="ten">${c.ten_khoa}</span>
+              <span class="status-tag ${c.trang_thai}">${TRANG_THAI_LABEL[c.trang_thai]}</span>
+            </div>
+            <div class="meta">${fmtDate(c.ngay_bat_dau)} – ${fmtDate(c.ngay_ket_thuc)} · <strong>${countByCourse[c.id] || 0} người đã đăng ký</strong></div>
+            <button style="margin-top:8px;background:none;border:none;color:var(--accent-dark);font-size:12.5px;padding:0;font-weight:500;" onclick="toggleTeachingRoster('${c.id}')">Xem danh sách đăng ký</button>
+            <div id="teach-roster-${c.id}" style="display:none;margin-top:10px;border-top:1px solid var(--line);padding-top:10px;"></div>
+          </div>`).join('')}
+      </div>`;
+  } catch (e) {
+    el.innerHTML = '';
+  }
+}
+
+async function toggleTeachingRoster(courseId) {
+  const el = document.getElementById(`teach-roster-${courseId}`);
+  if (el.style.display === 'block') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `<div style="color:var(--muted);font-size:13px;">Đang tải...</div>`;
+  try {
+    const rows = await sb(`dt_course_enrollments?course_id=eq.${courseId}&select=registered_at,hoso:dt_user_profiles(ho_ten,ma_so_nhan_vien,phong_khoa)&order=registered_at.asc`);
+    if (!rows.length) { el.innerHTML = `<div style="color:var(--muted);font-size:13px;">Chưa có ai đăng ký.</div>`; return; }
+    el.innerHTML = rows.map(r => `<div style="font-size:13px;margin-bottom:4px;">${r.hoso ? r.hoso.ho_ten : '—'} <span style="color:var(--muted);">${r.hoso ? '· ' + r.hoso.ma_so_nhan_vien : ''}${r.hoso && r.hoso.phong_khoa ? ' · ' + r.hoso.phong_khoa : ''}</span></div>`).join('');
+  } catch (e) {
+    el.innerHTML = `<div style="color:var(--danger);font-size:13px;">Không tải được danh sách.</div>`;
+  }
+}
+
+function switchMyCoursesTab(tab) {
+  myCoursesTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  renderMyCoursesList();
+}
+
+let allCoursesCache = [];
+let myEnrolledCourseIds = new Set();
+async function loadMyCourses() {
+  try {
+    const [courses, enrollments] = await Promise.all([
+      sb('dt_courses?select=*&order=ngay_bat_dau.desc'),
+      sb(`dt_course_enrollments?user_id=eq.${currentUser.id}&select=course_id`)
+    ]);
+    allCoursesCache = courses;
+    myEnrolledCourseIds = new Set(enrollments.map(e => e.course_id));
+  } catch (e) {
+    document.getElementById('my-courses-panel').innerHTML = `<div class="empty-panel">Không tải được danh sách khoá học.</div>`;
+    return;
+  }
+  document.querySelector(`.tab-btn[data-tab="${myCoursesTab}"]`).classList.add('active');
+  renderMyCoursesList();
+}
+
+async function toggleEnrollment(courseId, currentlyEnrolled) {
+  try {
+    if (currentlyEnrolled) {
+      await sb(`dt_course_enrollments?course_id=eq.${courseId}&user_id=eq.${currentUser.id}`, { method: 'DELETE', prefer: 'return=minimal' });
+      myEnrolledCourseIds.delete(courseId);
+    } else {
+      await sb('dt_course_enrollments', { method: 'POST', body: JSON.stringify({ course_id: courseId, user_id: currentUser.id }), prefer: 'return=minimal' });
+      myEnrolledCourseIds.add(courseId);
+    }
+    renderMyCoursesList();
+  } catch (e) {
+    alert('Có lỗi xảy ra: ' + e.message);
+  }
+}
+
+function renderMyCoursesList() {
+  const panel = document.getElementById('my-courses-panel');
+  const rows = allCoursesCache.filter(c => c.trang_thai === myCoursesTab);
+  if (!rows.length) {
+    panel.innerHTML = `
+      <div class="empty-panel">
+        <div class="glyph">···</div>
+        <p>Chưa có khoá học nào trong mục này.</p>
+      </div>`;
+    return;
+  }
+  panel.innerHTML = rows.map(c => {
+    const enrolled = myEnrolledCourseIds.has(c.id);
+    return `
+    <div class="course-card">
+      <div class="top">
+        <span class="ten">${c.ten_khoa}</span>
+        <span class="status-tag ${c.trang_thai}">${TRANG_THAI_LABEL[c.trang_thai]}</span>
+      </div>
+      <div class="meta">${c.giang_vien ? 'GV: ' + c.giang_vien + ' · ' : ''}${c.so_gio != null ? c.so_gio + ' giờ · ' : ''}${fmtDate(c.ngay_bat_dau)} – ${fmtDate(c.ngay_ket_thuc)}${c.dia_diem ? ' · ' + c.dia_diem : ''}</div>
+      ${c.mo_ta ? `<div class="mota">${c.mo_ta}</div>` : ''}
+      ${c.dieu_kien_cme ? `<div class="mota" style="color:var(--gold);">Điều kiện cấp CME: ${c.dieu_kien_cme}</div>` : ''}
+      <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button style="background:none;border:none;color:var(--accent-dark);font-size:12.5px;padding:0;font-weight:500;" onclick="toggleStudentMaterials('${c.id}')">Xem tài liệu</button>
+        <button style="background:none;border:none;color:var(--accent-dark);font-size:12.5px;padding:0;font-weight:500;" onclick="toggleStudentExams('${c.id}')">Bài kiểm tra</button>
+        ${attendancePillsHTML(c)}
+        ${enrolled
+          ? `<button style="background:none;border:1px solid var(--accent);color:var(--accent-dark);border-radius:20px;padding:3px 10px;font-size:11.5px;font-weight:500;" onclick="toggleEnrollment('${c.id}', true)">Đã đăng ký ✓ (bấm để huỷ)</button>`
+          : `<button style="background:var(--accent);color:#fff;border:none;border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:500;" onclick="toggleEnrollment('${c.id}', false)">Đăng ký học</button>`}
+      </div>
+      <div id="stu-mat-${c.id}" style="display:none;margin-top:12px;border-top:1px solid var(--line);padding-top:12px;"></div>
+      <div id="stu-exam-${c.id}" style="display:none;margin-top:12px;border-top:1px solid var(--line);padding-top:12px;"></div>
+    </div>`;
+  }).join('');
+}
+
+async function toggleStudentExams(courseId) {
+  const el = document.getElementById(`stu-exam-${courseId}`);
+  if (el.style.display === 'block') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `<div style="color:var(--muted);font-size:13px;">Đang tải...</div>`;
+  try {
+    const rows = await sb(`dt_course_exams?course_id=eq.${courseId}&select=*&order=created_at.desc`);
+    if (!rows.length) { el.innerHTML = `<div style="color:var(--muted);font-size:13px;">Chưa có bài kiểm tra.</div>`; return; }
+    el.innerHTML = rows.map(ex => `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=${encodeURIComponent(ex.link_bai)}" width="60" height="60" style="border:1px solid var(--line);border-radius:3px;" alt="QR">
+        <a href="${ex.link_bai}" target="_blank" style="color:var(--accent-dark);font-size:13px;font-weight:500;">${ex.ten_bai}</a>
+      </div>`).join('');
+  } catch (e) { el.innerHTML = `<div style="color:var(--danger);font-size:13px;">Không tải được bài kiểm tra.</div>`; }
+}
+
+function attendancePillsHTML(c) {
+  const list = (c.buoi_hoc || []).filter(x => x.link).sort((a, b) => a.buoi - b.buoi);
+  if (!list.length) return '';
+  return list.map(x => `<a href="${x.link}" target="_blank" style="color:var(--gold);font-size:11.5px;font-weight:500;padding:3px 9px;border:1px solid var(--gold);border-radius:20px;">Điểm danh buổi ${x.buoi}</a>`).join('');
+}
+
+async function toggleStudentMaterials(courseId) {
+  const el = document.getElementById(`stu-mat-${courseId}`);
+  if (el.style.display === 'block') { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `<div style="color:var(--muted);font-size:13px;">Đang tải...</div>`;
+  try {
+    const rows = await sb(`dt_course_materials?course_id=eq.${courseId}&select=*&order=uploaded_at.desc`);
+    if (!rows.length) { el.innerHTML = `<div style="color:var(--muted);font-size:13px;">Chưa có tài liệu.</div>`; return; }
+    el.innerHTML = rows.map(m => `<div style="margin-bottom:7px;"><a href="${m.file_url}" target="_blank" style="color:var(--accent-dark);font-size:13px;">${m.ten_tai_lieu}</a></div>`).join('');
+  } catch (e) { el.innerHTML = `<div style="color:var(--danger);font-size:13px;">Không tải được tài liệu.</div>`; }
+}
+
+// ---------- Import người dùng từ Excel ----------
+function downloadUserTemplate() {
+  const wsData = [
+    ['Mã số nhân viên', 'Họ tên', 'Phòng/Khoa', 'Chức vụ', 'Số điện thoại', 'Vai trò'],
+    ['DKTK0163', 'Nguyễn Thị A', 'Quản lý chất lượng', 'Nhân viên', '0900000000', 'Học viên']
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Danh sách');
+  XLSX.writeFile(wb, 'mau_import_nguoi_dung.xlsx');
+}
+
+const USER_COL_ALIASES = {
+  'ma so nhan vien': 'ma_so_nhan_vien', 'ma nhan vien': 'ma_so_nhan_vien', 'ma so': 'ma_so_nhan_vien', 'ma nv': 'ma_so_nhan_vien',
+  'ho ten': 'ho_ten', 'ho va ten': 'ho_ten', 'ten': 'ho_ten',
+  'phong/khoa': 'phong_khoa', 'phong khoa': 'phong_khoa', 'khoa': 'phong_khoa', 'phong': 'phong_khoa',
+  'chuc vu': 'chuc_vu',
+  'so dien thoai': 'so_dien_thoai', 'dien thoai': 'so_dien_thoai', 'sdt': 'so_dien_thoai',
+  'vai tro': 'vai_tro', 'quyen': 'vai_tro'
+};
+
+function mapRowToUser(row) {
+  const out = {};
+  for (const key in row) {
+    const field = USER_COL_ALIASES[normKey(key)];
+    if (field) out[field] = String(row[key]).trim();
+  }
+  return out;
+}
+
+async function handleUserExcelImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  try {
+    const rawRows = await readExcelFile(file);
+    const mapped = rawRows.map(mapRowToUser);
+    const parsed = [];
+    let skipped = 0;
+    mapped.forEach(m => {
+      if (!m.ma_so_nhan_vien || !m.ho_ten) { skipped++; return; }
+      parsed.push({
+        ma_so_nhan_vien: m.ma_so_nhan_vien.toUpperCase(),
+        ho_ten: m.ho_ten,
+        phong_khoa: m.phong_khoa || '',
+        chuc_vu: m.chuc_vu || '',
+        so_dien_thoai: m.so_dien_thoai || '',
+        vai_tro_raw: m.vai_tro || ''
+      });
+    });
+    if (!parsed.length) {
+      alert('Không tìm thấy dòng hợp lệ nào trong file. Kiểm tra lại tên cột có đúng như file mẫu không (Mã số nhân viên, Họ tên...).');
+      return;
+    }
+
+    // Lấy dữ liệu hiện có để KHÔNG ghi đè mất các ô chị để trống trong file
+    const masoList = parsed.map(p => p.ma_so_nhan_vien);
+    const existingByMaso = {};
+    for (const chunk of chunkArray(masoList, 200)) {
+      const rows = await sb(`dt_user_profiles?ma_so_nhan_vien=in.(${chunk.map(c => `"${c}"`).join(',')})&select=${USER_COLS}`);
+      rows.forEach(u => existingByMaso[u.ma_so_nhan_vien] = u);
+    }
+
+    const valid = parsed.map(p => {
+      const existing = existingByMaso[p.ma_so_nhan_vien];
+      const vaiTroNorm = normKey(p.vai_tro_raw);
+      const vaiTroFromFile = vaiTroNorm ? ((vaiTroNorm.includes('admin') || vaiTroNorm.includes('quan tri')) ? 'admin' : 'hoc_vien') : null;
+      return {
+        ma_so_nhan_vien: p.ma_so_nhan_vien,
+        ho_ten: p.ho_ten,
+        phong_khoa: p.phong_khoa || (existing ? existing.phong_khoa : null),
+        chuc_vu: p.chuc_vu || (existing ? existing.chuc_vu : null),
+        so_dien_thoai: p.so_dien_thoai || (existing ? existing.so_dien_thoai : null),
+        vai_tro: vaiTroFromFile || (existing ? existing.vai_tro : 'hoc_vien')
+      };
+    });
+
+    for (const chunk of chunkArray(valid, 200)) {
+      await sb('dt_user_profiles?on_conflict=ma_so_nhan_vien', {
+        method: 'POST',
+        body: JSON.stringify(chunk),
+        prefer: 'resolution=merge-duplicates,return=minimal'
+      });
+    }
+
+    const relinked = await relinkExternalCerts(valid);
+
+    alert(`Đã nhập ${valid.length} người dùng${skipped ? ` (bỏ qua ${skipped} dòng thiếu Mã số/Họ tên)` : ''}. Các ô để trống trong file sẽ giữ nguyên dữ liệu cũ nếu người đó đã có sẵn trong hệ thống.${relinked ? ` Đã tự gắn lại ${relinked} chứng chỉ trước đó "chưa có tài khoản" vào đúng tài khoản mới.` : ''}`);
+    await renderUsersSection(document.getElementById('main-content'));
+  } catch (e) {
+    alert('Nhập thất bại: ' + e.message);
+  }
+}
+
+async function relinkExternalCerts(rowsWithMaso) {
+  const masoList = rowsWithMaso.map(r => r.ma_so_nhan_vien);
+  const [idsRes, externalCerts] = await Promise.all([
+    sb(`dt_user_profiles?ma_so_nhan_vien=in.(${masoList.map(c => `"${c}"`).join(',')})&select=id,ma_so_nhan_vien,ho_ten`),
+    sb(`dt_certificates?user_id=is.null&external_key=not.is.null&select=id,external_key`)
+  ]);
+  const extByKey = {};
+  (externalCerts || []).forEach(c => { (extByKey[c.external_key] = extByKey[c.external_key] || []).push(c.id); });
+  let relinkedCount = 0;
+  for (const u of idsRes) {
+    const key = normKey(u.ho_ten);
+    const ids = extByKey[key];
+    if (ids && ids.length) {
+      await sb(`dt_certificates?id=in.(${ids.map(id => `"${id}"`).join(',')})`, {
+        method: 'PATCH',
+        body: JSON.stringify({ user_id: u.id, external_name: null, external_key: null }),
+        prefer: 'return=minimal'
+      });
+      relinkedCount += ids.length;
+    }
+  }
+  return relinkedCount;
+}
+
+// ---------- Chứng chỉ: helper dùng chung ----------
+const CERT_STATUS_LABEL = { cho_duyet: 'Chờ duyệt', da_duyet: 'Đã duyệt', tu_choi: 'Bị từ chối' };
+const CERT_TYPE_LABEL = { cme: 'CME – Đào tạo liên tục', cpe: 'CPE – Cập nhật kiến thức Dược', cne: 'CNE – Đào tạo Điều dưỡng liên tục' };
+
+function certTypeOptionsHTML(chucVu, selected) {
+  const types = ['cme', 'cpe', 'cne'];
+  return types.map(t => `<option value="${t}" ${t === selected ? 'selected' : ''}>${CERT_TYPE_LABEL[t]}</option>`).join('');
+}
+
+function certExpiryBadge(ngayHetHan) {
+  if (!ngayHetHan) return '';
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const exp = new Date(ngayHetHan);
+  const diffDays = Math.round((exp - today) / 86400000);
+  if (diffDays < 0) return `<span class="exp-badge expired">Đã hết hạn</span>`;
+  if (diffDays <= 30) return `<span class="exp-badge soon">Sắp hết hạn</span>`;
+  return '';
+}
+
+async function uploadCertFile(file, userId) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+  const path = `${userId}/${Date.now()}_${safeName}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/dt-chung-chi/${path}`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type || 'application/octet-stream' },
+    body: file
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return { file_url: `${SUPABASE_URL}/storage/v1/object/public/dt-chung-chi/${path}`, file_path: path };
+}
+
+// ---------- Import hàng loạt CME từ file Excel theo dõi ----------
+function excelSerialToDateStr(serial) {
+  const utcDays = Math.floor(serial - 25569);
+  const d = new Date(utcDays * 86400 * 1000);
+  return isNaN(d) ? null : d.toISOString().slice(0, 10);
+}
+
+function parseFlexibleDate(raw) {
+  if (raw === null || raw === undefined || raw === '') return null;
+  if (raw instanceof Date) return isNaN(raw) ? null : raw.toISOString().slice(0, 10);
+  if (typeof raw === 'number') {
+    if (raw < 1000 || raw > 60000) return null;
+    return excelSerialToDateStr(raw);
+  }
+  const str = String(raw).trim();
+  const m = str.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (!m) return null;
+  const a = parseInt(m[1]), b = parseInt(m[2]), y = parseInt(m[3]);
+  let day, month;
+  if (a > 12) { day = a; month = b; }
+  else if (b > 12) { day = b; month = a; }
+  else { day = a; month = b; }
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const d = new Date(Date.UTC(y, month - 1, day));
+  if (isNaN(d) || d.getUTCMonth() !== month - 1) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function determineLoaiFromRow(row) {
+  const c6 = row[6], c7 = row[7], c8 = row[8];
+  if (c6 && String(c6).trim().toLowerCase() === 'x') return 'cme';
+  if (c7 && String(c7).trim().toLowerCase() === 'x') return 'cpe';
+  if (c8 && String(c8).trim().toLowerCase() === 'x') return 'cne';
+  return 'cme';
+}
+
+function parseCmeTrackingFile(rawRows) {
+  let headerIdx = -1;
+  for (let i = 0; i < rawRows.length; i++) {
+    const cell = rawRows[i] && rawRows[i][0];
+    if (cell && String(cell).trim() === 'STT') { headerIdx = i; break; }
+  }
+  if (headerIdx === -1) throw new Error('Không tìm thấy dòng tiêu đề (cột "STT"). Kiểm tra lại file có đúng mẫu Bảng theo dõi CME không.');
+
+  const peopleMap = {};
+  let curKey = null;
+  let totalCertRows = 0;
+  let unparsedDateCount = 0;
+
+  for (let i = headerIdx + 1; i < rawRows.length; i++) {
+    const row = rawRows[i] || [];
+    const hoTenCell = row[1] ? String(row[1]).trim() : '';
+    const tenKhoaCell = row[5] ? String(row[5]).trim() : '';
+    if (hoTenCell) {
+      curKey = normKey(hoTenCell);
+      if (!peopleMap[curKey]) {
+        peopleMap[curKey] = {
+          hoTen: hoTenCell,
+          soCCHN: row[2] ? String(row[2]).trim() : '',
+          phamVi: row[3] ? String(row[3]).trim() : '',
+          viTri: row[4] ? String(row[4]).trim() : '',
+          certs: []
+        };
+      }
+    }
+    if (!curKey) continue;
+    if (tenKhoaCell) {
+      totalCertRows++;
+      const ngayCap = parseFlexibleDate(row[10]);
+      if (!ngayCap) unparsedDateCount++;
+      const soTietRaw = row[9];
+      const soTiet = (soTietRaw !== null && soTietRaw !== '' && !isNaN(Number(soTietRaw))) ? Number(soTietRaw) : null;
+      peopleMap[curKey].certs.push({ ten: tenKhoaCell, loai: determineLoaiFromRow(row), soTiet, ngayCap });
+    }
+  }
+  return { people: Object.values(peopleMap), totalCertRows, unparsedDateCount };
+}
+
+async function handleCmeBulkImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  try {
+    const rawRows = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = evt => {
+        try {
+          const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          resolve(XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true }));
+        } catch (err) { reject(err); }
+      };
+      reader.onerror = () => reject(new Error('Không đọc được file.'));
+      reader.readAsArrayBuffer(file);
+    });
+
+    const { people, totalCertRows, unparsedDateCount } = parseCmeTrackingFile(rawRows);
+    if (!people.length) { alert('Không tìm thấy dữ liệu người nào trong file.'); return; }
+
+    const existingUsers = await sb(`dt_user_profiles?select=id,ho_ten,chuc_vu`);
+    const userByName = {};
+    existingUsers.forEach(u => { userByName[normKey(u.ho_ten)] = u; });
+
+    let matchedCount = 0, externalCount = 0;
+    const certInsertRows = [];
+    const profileUpdates = [];
+
+    people.forEach(p => {
+      const key = normKey(p.hoTen);
+      const matched = userByName[key];
+      if (matched) {
+        matchedCount++;
+        if (!matched.chuc_vu && p.viTri) profileUpdates.push({ id: matched.id, chuc_vu: p.viTri });
+      } else {
+        externalCount++;
+      }
+      p.certs.forEach(c => {
+        certInsertRows.push({
+          user_id: matched ? matched.id : null,
+          external_name: matched ? null : p.hoTen,
+          external_key: matched ? null : key,
+          ten_chung_chi: c.ten,
+          loai_chung_chi: c.loai,
+          so_gio_tin_chi: c.soTiet,
+          ngay_cap: c.ngayCap,
+          nguon: 'admin',
+          trang_thai_duyet: 'da_duyet'
+        });
+      });
+      if (p.certs.length === 0 && !matched) {
+        certInsertRows.push({
+          user_id: null,
+          external_name: p.hoTen,
+          external_key: key,
+          ten_chung_chi: '(Chưa có chứng chỉ ghi nhận trong file)',
+          loai_chung_chi: 'cme',
+          so_gio_tin_chi: 0,
+          ngay_cap: null,
+          nguon: 'admin',
+          trang_thai_duyet: 'da_duyet'
+        });
+      }
+    });
+
+    const confirmMsg = `Tìm thấy ${people.length} người (${matchedCount} đã có tài khoản trong hệ thống, ${externalCount} chưa có tài khoản — vẫn đưa vào thống kê, hiển thị bằng tên).\n` +
+      `Tổng ${totalCertRows} dòng chứng chỉ sẽ được nhập${unparsedDateCount ? `, trong đó ${unparsedDateCount} dòng không đọc được ngày cấp (vẫn nhập, chỉ để trống ngày)` : ''}.\n\nTiếp tục nhập?`;
+    if (!confirm(confirmMsg)) return;
+
+    for (const chunk of chunkArray(certInsertRows, 200)) {
+      await sb('dt_certificates', { method: 'POST', body: JSON.stringify(chunk), prefer: 'return=minimal' });
+    }
+    for (const upd of profileUpdates) {
+      await sb(`dt_user_profiles?id=eq.${upd.id}`, { method: 'PATCH', body: JSON.stringify({ chuc_vu: upd.chuc_vu }), prefer: 'return=minimal' });
+    }
+
+    alert(`Đã nhập xong: ${certInsertRows.length} dòng chứng chỉ cho ${people.length} người.`);
+    await loadCerts();
+  } catch (e) {
+    alert('Nhập thất bại: ' + e.message);
+  }
+}
+
+// ---------- Chứng chỉ học viên (Admin) ----------
+let certUserMap = {};
+let certFilterStatus = 'all';
+let certSearchTerm = '';
+let allCertsCache = [];
+
+async function renderCertsAdminSection(main) {
+  main.innerHTML = `
+    <h2>Chứng chỉ học viên</h2>
+    <p class="desc">Theo dõi chứng chỉ toàn viện — do quản trị viên cấp hoặc do học viên tự thêm (cần duyệt).</p>
+    <div class="toolbar">
+      <input id="cert-search" placeholder="Tìm theo tên học viên, mã số, tên chứng chỉ..." style="flex:1;max-width:340px;padding:9px 12px;border:1px solid var(--line);border-radius:3px;font-size:13.5px;" oninput="onCertSearch(this.value)">
+      <div style="display:flex;gap:10px;align-items:center;">
+        <select id="cert-filter-status" onchange="onCertFilterStatus(this.value)" style="padding:8px 10px;border:1px solid var(--line);border-radius:3px;font-size:13.5px;">
+          <option value="all">Tất cả trạng thái</option>
+          <option value="cho_duyet">Chờ duyệt</option>
+          <option value="da_duyet">Đã duyệt</option>
+          <option value="tu_choi">Bị từ chối</option>
+        </select>
+        <select id="cert-filter-loai" onchange="onCertFilterLoai(this.value)" style="padding:8px 10px;border:1px solid var(--line);border-radius:3px;font-size:13.5px;">
+          <option value="all">Tất cả loại</option>
+          <option value="cme">CME</option>
+          <option value="cpe">CPE</option>
+          <option value="cne">CNE</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);"><input type="checkbox" id="cert-filter-missingdate" style="width:auto;" onchange="onCertFilterMissingDate(this.checked)"> Chỉ hiện thiếu ngày cấp</label>
+        <button class="btn-add" onclick="toggleAddCertForm()">Thêm chứng chỉ</button>
+        <button class="btn-cancel" onclick="renderAssignDeptSection(document.getElementById('main-content'))">Gán khoa/phòng người chưa có TK</button>
+        <button class="btn-cancel" onclick="document.getElementById('cme-excel-input').click()">Nhập CME từ Excel</button>
+        <input type="file" id="cme-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleCmeBulkImport(event)">
+      </div>
+    </div>
+    <div id="add-cert-form-holder"></div>
+    <div class="panel" id="certs-panel">
+      <table>
+        <thead><tr>
+          <th>Học viên</th><th>Tên chứng chỉ</th><th>Loại</th><th>Số giờ</th><th>Đơn vị cấp</th><th>Ngày cấp</th><th>Hết hạn</th><th>Khoá học</th><th>Nguồn</th><th>Trạng thái</th><th></th>
+        </tr></thead>
+        <tbody id="certs-tbody"><tr><td colspan="11" style="color:var(--muted)">Đang tải...</td></tr></tbody>
+      </table>
+    </div>`;
+  await loadCerts();
+}
+
+async function loadCerts() {
+  const tbody = document.getElementById('certs-tbody');
+  try {
+    const rows = await sb(`dt_certificates?select=*,hoso:dt_user_profiles(ma_so_nhan_vien,ho_ten),khoa:dt_courses(ten_khoa)&order=created_at.desc`);
+    allCertsCache = rows;
+    renderCertRows();
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="11" style="color:var(--danger)">Không tải được danh sách. ${e.message}</td></tr>`;
+  }
+}
+
+function onCertSearch(v) { certSearchTerm = v; renderCertRows(); }
+function onCertFilterStatus(v) { certFilterStatus = v; renderCertRows(); }
+let certFilterLoai = 'all';
+function onCertFilterLoai(v) { certFilterLoai = v; renderCertRows(); }
+let certFilterMissingDate = false;
+function onCertFilterMissingDate(v) { certFilterMissingDate = v; renderCertRows(); }
+
+function renderCertRows() {
+  const tbody = document.getElementById('certs-tbody');
+  const q = normKey(certSearchTerm || '');
+  let rows = allCertsCache;
+  if (certFilterStatus !== 'all') rows = rows.filter(c => c.trang_thai_duyet === certFilterStatus);
+  if (certFilterLoai !== 'all') rows = rows.filter(c => c.loai_chung_chi === certFilterLoai);
+  if (certFilterMissingDate) rows = rows.filter(c => !c.ngay_cap);
+  if (q) {
+    rows = rows.filter(c =>
+      normKey(c.ten_chung_chi || '').includes(q) ||
+      normKey((c.hoso && c.hoso.ho_ten) || '').includes(q) ||
+      normKey((c.hoso && c.hoso.ma_so_nhan_vien) || '').includes(q)
+    );
+  }
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="11" style="color:var(--muted)">Không có chứng chỉ nào.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(certRowHTML).join('');
+}
+
+function certRowHTML(c) {
+  const hocVienCell = c.hoso
+    ? `${c.hoso.ho_ten}<br><span style="color:var(--muted);font-size:12px;">${c.hoso.ma_so_nhan_vien}</span>`
+    : (c.external_name ? `${c.external_name}<br><span style="color:var(--muted);font-size:12px;">chưa có tài khoản</span>` : '—');
+  return `
+    <tr id="cert-row-${c.id}">
+      <td>${hocVienCell}</td>
+      <td>${c.file_url ? `<a href="${c.file_url}" target="_blank" style="color:var(--accent-dark);">${c.ten_chung_chi}</a>` : c.ten_chung_chi}</td>
+      <td>${(c.loai_chung_chi || 'cme').toUpperCase()}</td>
+      <td style="text-align:right;">${c.so_gio_tin_chi != null ? c.so_gio_tin_chi : '—'}</td>
+      <td>${c.don_vi_cap || '—'}</td>
+      <td>${fmtDate(c.ngay_cap)}</td>
+      <td>${fmtDate(c.ngay_het_han)} ${certExpiryBadge(c.ngay_het_han)}</td>
+      <td>${c.khoa ? c.khoa.ten_khoa : '—'}</td>
+      <td>${c.nguon === 'admin' ? 'Admin cấp' : 'Học viên tự thêm'}</td>
+      <td><span class="cert-status ${c.trang_thai_duyet}">${CERT_STATUS_LABEL[c.trang_thai_duyet]}</span></td>
+      <td class="row-actions">
+        ${c.trang_thai_duyet === 'cho_duyet' ? `<button onclick="setCertStatus('${c.id}','da_duyet')">Duyệt</button><button onclick="setCertStatus('${c.id}','tu_choi')">Từ chối</button>` : ''}
+        <button onclick="editCertInline('${c.id}')">Sửa</button>
+        <button class="del" onclick="deleteCert('${c.id}','${(c.ten_chung_chi || '').replace(/'/g, "\\'")}')">Xoá</button>
+      </td>
+    </tr>`;
+}
+
+let openEditCertId = null;
+
+async function editCertInline(id) {
+  const existing = document.getElementById(`cert-edit-${id}`);
+  if (existing) { closeCertEdit(id); return; }
+  if (openEditCertId && openEditCertId !== id) closeCertEdit(openEditCertId);
+  const c = allCertsCache.find(x => x.id === id);
+  if (!c) return;
+  const row = document.getElementById(`cert-row-${id}`);
+
+  const [users, courses] = await Promise.all([
+    sb(`dt_user_profiles?select=id,ma_so_nhan_vien,ho_ten&order=ho_ten.asc`),
+    sb('dt_courses?select=id,ten_khoa&order=ten_khoa.asc')
+  ]);
+  certUserMap = {};
+  users.forEach(u => certUserMap[u.ma_so_nhan_vien] = u);
+  const currentHocVienVal = c.hoso ? `${c.hoso.ma_so_nhan_vien} — ${c.hoso.ho_ten}` : (c.external_name || '');
+
+  const html = `
+    <tr id="cert-edit-${id}"><td colspan="11">
+      <div class="form-grid" style="border-bottom:none;padding:16px 4px;">
+        <p class="form-err" id="cert-edit-err-${id}"></p>
+        <div class="full"><label>Học viên (gõ mã số/họ tên nếu có tài khoản, hoặc để nguyên tên nếu chưa có tài khoản)</label>
+          <input id="ce-hocvien-${id}" list="ce-datalist-${id}" value="${currentHocVienVal}">
+          <datalist id="ce-datalist-${id}">${users.map(u => `<option value="${u.ma_so_nhan_vien} — ${u.ho_ten}">`).join('')}</datalist>
+        </div>
+        <div class="full"><label>Tên chứng chỉ *</label><input id="ce-ten-${id}" value="${(c.ten_chung_chi || '').replace(/"/g, '&quot;')}"></div>
+        <div><label>Loại chứng chỉ</label><select id="ce-loai-${id}">${certTypeOptionsHTML(null, c.loai_chung_chi)}</select></div>
+        <div><label>Số giờ tín chỉ</label><input id="ce-sogio-${id}" type="number" step="0.5" value="${c.so_gio_tin_chi != null ? c.so_gio_tin_chi : ''}"></div>
+        <div><label>Đơn vị cấp</label><input id="ce-donvi-${id}" value="${(c.don_vi_cap || '').replace(/"/g, '&quot;')}"></div>
+        <div><label>Ngày cấp</label><input id="ce-ngaycap-${id}" type="date" value="${c.ngay_cap || ''}"></div>
+        <div><label>Ngày hết hạn</label><input id="ce-hethan-${id}" type="date" value="${c.ngay_het_han || ''}"></div>
+        <div><label>Gắn với khoá học</label>
+          <select id="ce-khoa-${id}"><option value="">Không gắn khoá học cụ thể</option>${courses.map(k => `<option value="${k.id}" ${c.course_id === k.id ? 'selected' : ''}>${k.ten_khoa}</option>`).join('')}</select>
+        </div>
+        <div class="form-actions">
+          <button class="btn-save" onclick="saveCertInline('${id}')">Lưu</button>
+          <button class="btn-cancel" onclick="closeCertEdit('${id}')">Huỷ</button>
+        </div>
+      </div>
+    </td></tr>`;
+  row.insertAdjacentHTML('afterend', html);
+  openEditCertId = id;
+  document.getElementById(`ce-ten-${id}`).focus();
+}
+
+function closeCertEdit(id) {
+  const el = document.getElementById(`cert-edit-${id}`);
+  if (el) el.remove();
+  if (openEditCertId === id) openEditCertId = null;
+}
+
+async function saveCertInline(id) {
+  const errEl = document.getElementById(`cert-edit-err-${id}`);
+  errEl.style.display = 'none';
+  const ten = document.getElementById(`ce-ten-${id}`).value.trim();
+  if (!ten) { errEl.textContent = 'Vui lòng nhập tên chứng chỉ.'; errEl.style.display = 'block'; return; }
+  const hocVienVal = document.getElementById(`ce-hocvien-${id}`).value.trim();
+  if (!hocVienVal) { errEl.textContent = 'Vui lòng nhập học viên (mã số/tên nếu có tài khoản, hoặc họ tên nếu chưa có).'; errEl.style.display = 'block'; return; }
+  const maso = hocVienVal.split('—')[0].trim().toUpperCase();
+  const matchedUser = certUserMap[maso];
+
+  const payload = {
+    ten_chung_chi: ten,
+    loai_chung_chi: document.getElementById(`ce-loai-${id}`).value,
+    so_gio_tin_chi: document.getElementById(`ce-sogio-${id}`).value ? Number(document.getElementById(`ce-sogio-${id}`).value) : null,
+    don_vi_cap: document.getElementById(`ce-donvi-${id}`).value.trim() || null,
+    ngay_cap: document.getElementById(`ce-ngaycap-${id}`).value || null,
+    ngay_het_han: document.getElementById(`ce-hethan-${id}`).value || null,
+    course_id: document.getElementById(`ce-khoa-${id}`).value || null,
+    user_id: matchedUser ? matchedUser.id : null,
+    external_name: matchedUser ? null : hocVienVal,
+    external_key: matchedUser ? null : normKey(hocVienVal)
+  };
+  try {
+    const rows = await sb(`dt_certificates?id=eq.${id}&select=*,hoso:dt_user_profiles(ma_so_nhan_vien,ho_ten),khoa:dt_courses(ten_khoa)`, {
+      method: 'PATCH', body: JSON.stringify(payload), prefer: 'return=representation'
+    });
+    const idx = allCertsCache.findIndex(x => x.id === id);
+    if (idx > -1) allCertsCache[idx] = rows[0];
+    closeCertEdit(id);
+    document.getElementById(`cert-row-${id}`).outerHTML = certRowHTML(rows[0]);
+  } catch (e) {
+    errEl.textContent = 'Có lỗi xảy ra: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function setCertStatus(id, status) {
+  try {
+    await sb(`dt_certificates?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ trang_thai_duyet: status }), prefer: 'return=minimal' });
+    const idx = allCertsCache.findIndex(c => c.id === id);
+    if (idx > -1) allCertsCache[idx].trang_thai_duyet = status;
+    renderCertRows();
+  } catch (e) { alert('Có lỗi xảy ra: ' + e.message); }
+}
+
+async function deleteCert(id, ten) {
+  if (!confirm(`Xoá vĩnh viễn chứng chỉ "${ten}"?`)) return;
+  try {
+    await sb(`dt_certificates?id=eq.${id}`, { method: 'DELETE', prefer: 'return=minimal' });
+    allCertsCache = allCertsCache.filter(c => c.id !== id);
+    renderCertRows();
+  } catch (e) { alert('Không xoá được: ' + e.message); }
+}
+
+async function toggleAddCertForm() {
+  const holder = document.getElementById('add-cert-form-holder');
+  if (holder.innerHTML) { holder.innerHTML = ''; return; }
+  const [users, courses] = await Promise.all([
+    sb(`dt_user_profiles?select=id,ma_so_nhan_vien,ho_ten,chuc_vu&order=ho_ten.asc`),
+    sb('dt_courses?select=id,ten_khoa&order=ten_khoa.asc')
+  ]);
+  certUserMap = {};
+  users.forEach(u => certUserMap[u.ma_so_nhan_vien] = u);
+  holder.innerHTML = `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="form-grid">
+        <p class="form-err" id="add-cert-err"></p>
+        <div class="full"><label>Học viên * (gõ mã số hoặc họ tên)</label>
+          <input id="cert-user-input" list="cert-user-datalist" placeholder="VD: DKTK0163 hoặc Nguyễn Thị A" oninput="onCertUserPicked()">
+          <datalist id="cert-user-datalist">${users.map(u => `<option value="${u.ma_so_nhan_vien} — ${u.ho_ten}">`).join('')}</datalist>
+        </div>
+        <div class="full"><label>Tên chứng chỉ *</label><input id="cert-ten" placeholder="VD: Chứng chỉ CME Tim mạch 2026"></div>
+        <div><label>Loại chứng chỉ *</label>
+          <select id="cert-loai">${certTypeOptionsHTML(null, 'cme')}</select>
+          <div id="cert-loai-note" style="font-size:12px;color:var(--muted);margin-top:4px;">Chọn học viên trước để hiện đúng loại phù hợp với chức danh.</div>
+        </div>
+        <div><label>Đơn vị cấp</label><input id="cert-donvi"></div>
+        <div><label>Số giờ tín chỉ (số tiết)</label><input id="cert-sogio" type="number" step="0.5" placeholder="VD: 8"></div>
+        <div><label>Ngày cấp</label><input id="cert-ngaycap" type="date"></div>
+        <div><label>Ngày hết hạn</label><input id="cert-hethan" type="date"></div>
+        <div><label>Gắn với khoá học (không bắt buộc)</label>
+          <select id="cert-khoa"><option value="">Không gắn khoá học cụ thể</option>${courses.map(c => `<option value="${c.id}">${c.ten_khoa}</option>`).join('')}</select>
+        </div>
+        <div class="full"><label>File chứng chỉ</label><input id="cert-file" type="file"></div>
+        <div class="form-actions">
+          <button class="btn-save" onclick="saveAdminCert()">Lưu</button>
+          <button class="btn-cancel" onclick="toggleAddCertForm()">Huỷ</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('cert-user-input').focus();
+}
+
+function onCertUserPicked() {
+  const val = document.getElementById('cert-user-input').value.trim();
+  const maso = val.split('—')[0].trim().toUpperCase();
+  const user = certUserMap[maso];
+  const note = document.getElementById('cert-loai-note');
+  note.textContent = user ? `Học viên: ${user.ho_ten} (${user.chuc_vu || 'chưa cập nhật chức danh'})` : '';
+}
+
+async function saveAdminCert() {
+  const errEl = document.getElementById('add-cert-err');
+  errEl.style.display = 'none';
+  const userInputVal = document.getElementById('cert-user-input').value.trim();
+  const maso = userInputVal.split('—')[0].trim().toUpperCase();
+  const user = certUserMap[maso];
+  const ten = document.getElementById('cert-ten').value.trim();
+  if (!user) {
+    errEl.textContent = 'Không tìm thấy học viên với mã số này. Chọn từ danh sách gợi ý nhé.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!ten) {
+    errEl.textContent = 'Vui lòng nhập tên chứng chỉ.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const loaiChon = document.getElementById('cert-loai').value;
+  const ngayCap = document.getElementById('cert-ngaycap').value || null;
+
+  // Kiểm tra trùng lặp (mềm) trước khi lưu
+  const dup = allCertsCache.find(c => c.user_id === user.id && normKey(c.ten_chung_chi) === normKey(ten) && c.ngay_cap === ngayCap);
+  if (dup && !confirm(`Học viên "${user.ho_ten}" có vẻ đã có chứng chỉ "${ten}"${ngayCap ? ' cấp ngày ' + fmtDate(ngayCap) : ''} trong hệ thống rồi. Vẫn muốn thêm bản mới?`)) {
+    return;
+  }
+
+  try {
+    const file = document.getElementById('cert-file').files[0];
+    let fileInfo = {};
+    if (file) fileInfo = await uploadCertFile(file, user.id);
+    const payload = {
+      user_id: user.id,
+      course_id: document.getElementById('cert-khoa').value || null,
+      ten_chung_chi: ten,
+      loai_chung_chi: loaiChon,
+      don_vi_cap: document.getElementById('cert-donvi').value.trim() || null,
+      so_gio_tin_chi: document.getElementById('cert-sogio').value ? Number(document.getElementById('cert-sogio').value) : null,
+      ngay_cap: ngayCap,
+      ngay_het_han: document.getElementById('cert-hethan').value || null,
+      nguon: 'admin',
+      trang_thai_duyet: 'da_duyet',
+      ...fileInfo
+    };
+    await sb('dt_certificates', { method: 'POST', body: JSON.stringify(payload), prefer: 'return=minimal' });
+    toggleAddCertForm();
+    await loadCerts();
+  } catch (e) {
+    errEl.textContent = 'Có lỗi xảy ra: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ---------- Chứng nhận của tôi (Học viên) ----------
+async function renderMyCertsSection(main) {
+  main.innerHTML = `
+    <h2>Chứng nhận của tôi</h2>
+    <p class="desc">Chứng chỉ do đơn vị cấp và chứng chỉ chị tự thêm.</p>
+    <div class="toolbar"><span></span><button class="btn-add" onclick="toggleMyCertForm()">Thêm chứng chỉ của tôi</button></div>
+    <div id="my-cert-form-holder"></div>
+    <div class="panel" id="my-certs-panel"><div class="empty-panel" style="color:var(--muted)">Đang tải...</div></div>`;
+  await loadMyCerts();
+}
+
+async function loadMyCerts() {
+  const panel = document.getElementById('my-certs-panel');
+  try {
+    const rows = await sb(`dt_certificates?user_id=eq.${currentUser.id}&select=*,khoa:dt_courses(ten_khoa)&order=created_at.desc`);
+    if (!rows.length) {
+      panel.innerHTML = `<div class="empty-panel"><div class="glyph">···</div><p>Chưa có chứng chỉ nào.</p></div>`;
+      return;
+    }
+    panel.innerHTML = rows.map(c => `
+      <div class="cert-card">
+        <div class="top">
+          <span class="ten">${c.file_url ? `<a href="${c.file_url}" target="_blank" style="color:inherit;">${c.ten_chung_chi}</a>` : c.ten_chung_chi}</span>
+          <span>
+            ${c.nguon === 'hoc_vien' ? `<span class="cert-status ${c.trang_thai_duyet}">${CERT_STATUS_LABEL[c.trang_thai_duyet]}</span>` : `<span class="cert-status da_duyet">Do đơn vị cấp</span>`}
+            <span class="role-tag hoc_vien" style="margin-left:4px;">${(c.loai_chung_chi || 'cme').toUpperCase()}</span>
+            ${certExpiryBadge(c.ngay_het_han)}
+          </span>
+        </div>
+        <div class="meta">${c.don_vi_cap ? c.don_vi_cap + ' · ' : ''}${c.so_gio_tin_chi != null ? c.so_gio_tin_chi + ' giờ tín chỉ · ' : ''}${c.ngay_cap ? 'Cấp ' + fmtDate(c.ngay_cap) : ''}${c.ngay_het_han ? ' · Hết hạn ' + fmtDate(c.ngay_het_han) : ''}${c.khoa ? ' · Khoá: ' + c.khoa.ten_khoa : ''}</div>
+        ${c.nguon === 'hoc_vien' ? `<button style="margin-top:8px;background:none;border:none;color:var(--muted);font-size:12px;padding:0;" onclick="deleteMyCert('${c.id}')">Xoá</button>` : ''}
+      </div>`).join('');
+  } catch (e) {
+    panel.innerHTML = `<div class="empty-panel" style="color:var(--danger)">Không tải được: ${e.message}</div>`;
+  }
+}
+
+function toggleMyCertForm() {
+  const holder = document.getElementById('my-cert-form-holder');
+  if (holder.innerHTML) { holder.innerHTML = ''; return; }
+  holder.innerHTML = `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="form-grid">
+        <p class="form-err" id="my-cert-err"></p>
+        <div class="full"><label>Tên chứng chỉ *</label><input id="mc-ten"></div>
+        <div><label>Loại chứng chỉ *</label><select id="mc-loai">${certTypeOptionsHTML(currentUser.chuc_vu, 'cme')}</select></div>
+        <div><label>Đơn vị cấp</label><input id="mc-donvi"></div>
+        <div><label>Số giờ tín chỉ (số tiết)</label><input id="mc-sogio" type="number" step="0.5" placeholder="VD: 8"></div>
+        <div><label>Ngày cấp</label><input id="mc-ngaycap" type="date"></div>
+        <div><label>Ngày hết hạn</label><input id="mc-hethan" type="date"></div>
+        <div class="full"><label>File chứng chỉ</label><input id="mc-file" type="file"></div>
+        <p class="desc" style="margin:-4px 0 0;grid-column:1/-1;">Chứng chỉ tự thêm sẽ cần quản trị viên duyệt trước khi hiển thị chính thức.</p>
+        <div class="form-actions">
+          <button class="btn-save" onclick="saveMyCert()">Lưu</button>
+          <button class="btn-cancel" onclick="toggleMyCertForm()">Huỷ</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('mc-ten').focus();
+}
+
+async function saveMyCert() {
+  const errEl = document.getElementById('my-cert-err');
+  errEl.style.display = 'none';
+  const ten = document.getElementById('mc-ten').value.trim();
+  if (!ten) { errEl.textContent = 'Vui lòng nhập tên chứng chỉ.'; errEl.style.display = 'block'; return; }
+  try {
+    const file = document.getElementById('mc-file').files[0];
+    let fileInfo = {};
+    if (file) fileInfo = await uploadCertFile(file, currentUser.id);
+    const payload = {
+      user_id: currentUser.id,
+      ten_chung_chi: ten,
+      loai_chung_chi: document.getElementById('mc-loai').value,
+      don_vi_cap: document.getElementById('mc-donvi').value.trim() || null,
+      so_gio_tin_chi: document.getElementById('mc-sogio').value ? Number(document.getElementById('mc-sogio').value) : null,
+      ngay_cap: document.getElementById('mc-ngaycap').value || null,
+      ngay_het_han: document.getElementById('mc-hethan').value || null,
+      nguon: 'hoc_vien',
+      trang_thai_duyet: 'cho_duyet',
+      ...fileInfo
+    };
+    await sb('dt_certificates', { method: 'POST', body: JSON.stringify(payload), prefer: 'return=minimal' });
+    toggleMyCertForm();
+    await loadMyCerts();
+  } catch (e) {
+    errEl.textContent = 'Có lỗi xảy ra: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function deleteMyCert(id) {
+  if (!confirm('Xoá chứng chỉ này?')) return;
+  try {
+    await sb(`dt_certificates?id=eq.${id}`, { method: 'DELETE', prefer: 'return=minimal' });
+    await loadMyCerts();
+  } catch (e) { alert('Không xoá được: ' + e.message); }
+}
+
+async function downloadUnlinkedPeopleTemplate() {
+  try {
+    const rows = await sb(`dt_certificates?user_id=is.null&external_name=not.is.null&select=external_name,external_key`);
+    const uniqueMap = {};
+    (rows || []).forEach(r => { if (r.external_key) uniqueMap[r.external_key] = r.external_name; });
+    const names = Object.values(uniqueMap).sort((a, b) => a.localeCompare(b, 'vi'));
+    if (!names.length) { alert('Hiện không có ai đang "chưa có tài khoản" trong dữ liệu chứng chỉ.'); return; }
+    const wsData = [
+      ['Mã số nhân viên', 'Họ tên', 'Phòng/Khoa', 'Chức vụ', 'Số điện thoại', 'Vai trò'],
+      ...names.map(n => ['', n, '', '', '', 'Học viên'])
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Danh sách');
+    XLSX.writeFile(wb, 'danh_sach_chua_co_tai_khoan.xlsx');
+  } catch (e) {
+    alert('Không tải được danh sách: ' + e.message);
+  }
+}
+
+// ---------- Gán khoa/phòng cho người chưa có tài khoản ----------
+async function renderAssignDeptSection(main) {
+  main.innerHTML = `
+    <button class="btn-cancel" style="margin-bottom:16px" onclick="renderCertsAdminSection(document.getElementById('main-content'))">← Quay lại Chứng chỉ học viên</button>
+    <h2>Gán khoa/phòng cho người chưa có tài khoản</h2>
+    <p class="desc">Những người này có chứng chỉ trong hệ thống nhưng chưa có tài khoản đăng nhập. Gán khoa/phòng ở đây để Tổng quan CME thống kê đúng theo khoa/phòng — không cần tạo tài khoản.</p>
+    <div class="panel" id="assign-dept-panel"><div style="padding:16px 20px;color:var(--muted)">Đang tải...</div></div>`;
+  await loadAssignDeptList();
+}
+
+async function loadAssignDeptList() {
+  const panel = document.getElementById('assign-dept-panel');
+  try {
+    const rows = await sb(`dt_certificates?user_id=is.null&external_key=not.is.null&select=external_key,external_name,external_phong_khoa,external_loai_tru_cme,so_gio_tin_chi`);
+    const byKey = {};
+    rows.forEach(r => {
+      if (!byKey[r.external_key]) byKey[r.external_key] = { name: r.external_name, phong_khoa: r.external_phong_khoa || '', loai_tru: r.external_loai_tru_cme || false, count: 0, hours: 0 };
+      byKey[r.external_key].count++;
+      byKey[r.external_key].hours += Number(r.so_gio_tin_chi) || 0;
+    });
+    const people = Object.entries(byKey).sort((a, b) => a[1].name.localeCompare(b[1].name, 'vi'));
+    if (!people.length) {
+      panel.innerHTML = `<div style="padding:16px 20px;color:var(--muted)">Không có ai đang thiếu khoa/phòng — mọi chứng chỉ đều đã gắn với tài khoản có sẵn.</div>`;
+      return;
+    }
+    panel.innerHTML = `
+      <table>
+        <thead><tr><th>Họ tên</th><th>Số dòng chứng chỉ</th><th>Tổng giờ tín chỉ</th><th>Khoa/Phòng</th><th>Theo dõi CME</th><th></th></tr></thead>
+        <tbody>
+          ${people.map(([key, p]) => `
+            <tr id="assign-row-${key}">
+              <td>${p.name}</td>
+              <td>${p.count}</td>
+              <td>${p.hours}</td>
+              <td><input id="assign-input-${key}" value="${(p.phong_khoa || '').replace(/"/g, '&quot;')}" placeholder="VD: Phòng Điều dưỡng" style="padding:7px 10px;border:1px solid var(--line);border-radius:3px;width:100%;max-width:220px;"></td>
+              <td style="text-align:center;"><input type="checkbox" id="assign-track-${key}" style="width:auto;" ${p.loai_tru ? '' : 'checked'}></td>
+              <td><button class="btn-save" style="padding:7px 14px;" onclick="saveAssignDept('${key}')">Lưu</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      <p class="desc" style="padding:12px 20px;margin:0;">Bỏ tick "Theo dõi CME" cho người không thuộc khối chuyên môn (VD lãnh đạo không hành nghề khám chữa bệnh) — họ sẽ không tính vào thống kê CME nữa.</p>`;
+  } catch (e) {
+    panel.innerHTML = `<div style="padding:16px 20px;color:var(--danger)">Không tải được danh sách: ${e.message}</div>`;
+  }
+}
+
+async function saveAssignDept(key) {
+  const val = document.getElementById(`assign-input-${key}`).value.trim();
+  const track = document.getElementById(`assign-track-${key}`).checked;
+  try {
+    await sb(`dt_certificates?external_key=eq.${encodeURIComponent(key)}&user_id=is.null`, {
+      method: 'PATCH',
+      body: JSON.stringify({ external_phong_khoa: val || null, external_loai_tru_cme: !track }),
+      prefer: 'return=minimal'
+    });
+    const row = document.getElementById(`assign-row-${key}`);
+    if (row) row.style.background = '#E1EBE7';
+    setTimeout(() => { if (row) row.style.background = ''; }, 900);
+  } catch (e) {
+    alert('Không lưu được: ' + e.message);
+  }
+}
+
+// ---------- Dashboard tổng quan CME (Admin) ----------
+let cmeCycle120 = { start: '2021-01-01', end: '2025-12-31', required_hours: 120 };
+let cmeCycle48 = { start: '2024-01-01', end: '2025-12-31', required_hours: 48 };
+
+async function loadCmeCycles() {
+  try {
+    const rows = await sb(`dt_settings?key=in.(cme_cycle,cme_cycle_48)&select=key,value`);
+    (rows || []).forEach(r => {
+      if (r.key === 'cme_cycle') cmeCycle120 = r.value;
+      if (r.key === 'cme_cycle_48') cmeCycle48 = r.value;
+    });
+  } catch (e) { /* dùng mặc định nếu chưa có */ }
+}
+
+async function saveCycleSetting(key, start, end, hours) {
+  const value = { start, end, required_hours: hours };
+  await sb(`dt_settings?key=eq.${key}`, { method: 'PATCH', body: JSON.stringify({ value }), prefer: 'return=minimal' });
+  if (key === 'cme_cycle') cmeCycle120 = value; else cmeCycle48 = value;
+}
+
+function computeCycleStats(users, certs, cycle) {
+  const start = cycle.start, end = cycle.end, required = Number(cycle.required_hours) || 0;
+  const hoursByUser = {};
+  const externalMeta = {};
+  certs.forEach(c => {
+    if (c.trang_thai_duyet !== 'da_duyet') return;
+    const h = Number(c.so_gio_tin_chi) || 0;
+    const inRange = c.ngay_cap && c.ngay_cap >= start && c.ngay_cap <= end;
+    if (c.user_id) {
+      if (inRange) hoursByUser[c.user_id] = (hoursByUser[c.user_id] || 0) + h;
+    } else if (c.external_key) {
+      if (!externalMeta[c.external_key]) externalMeta[c.external_key] = { name: c.external_name || c.external_key, dept: c.external_phong_khoa || '', hours: 0 };
+      if (!externalMeta[c.external_key].dept && c.external_phong_khoa) externalMeta[c.external_key].dept = c.external_phong_khoa;
+      if (inRange) externalMeta[c.external_key].hours += h;
+    }
+  });
+  const people = users.map(u => {
+    const dat = hoursByUser[u.id] || 0;
+    return { name: u.ho_ten, dept: u.phong_khoa || 'Chưa phân khoa', chuc_vu: u.chuc_vu, dat, thieu: Math.max(0, required - dat), du: dat >= required };
+  });
+  Object.values(externalMeta).forEach(e => {
+    people.push({ name: e.name + ' (chưa có tài khoản)', dept: e.dept || 'Chưa có tài khoản (dữ liệu ngoài)', chuc_vu: '', dat: e.hours, thieu: Math.max(0, required - e.hours), du: e.hours >= required });
+  });
+  const tongNV = people.length;
+  const soDu = people.filter(p => p.du).length;
+  const soThieu = tongNV - soDu;
+  const tyLeDu = tongNV ? Math.round((soDu / tongNV) * 100) : 0;
+  const tongGioThieu = people.reduce((s, p) => s + p.thieu, 0);
+  const byDept = {};
+  people.forEach(p => {
+    if (!byDept[p.dept]) byDept[p.dept] = { total: 0, du: 0 };
+    byDept[p.dept].total++;
+    if (p.du) byDept[p.dept].du++;
+  });
+  const deptRows = Object.entries(byDept).sort((a, b) => b[1].total - a[1].total);
+  const topThieu = [...people].filter(p => p.thieu > 0).sort((a, b) => b.thieu - a.thieu).slice(0, 10);
+  return { required, start, end, tongNV, soDu, soThieu, tyLeDu, tongGioThieu, deptRows, topThieu, people };
+}
+
+// ---------- Tra cứu cá nhân (debug số liệu) ----------
+let dashboardUsersCache = [];
+let dashboardCertsCache = [];
+let dashboardCycleStats = {};
+
+function onLookupInput(v) {
+  const term = normKey(v || '');
+  const resultEl = document.getElementById('lookup-result');
+  if (!term || term.length < 2) { resultEl.innerHTML = ''; return; }
+  const matchedUsers = dashboardUsersCache.filter(u => normKey(u.ho_ten).includes(term));
+  const seenKeys = new Set();
+  const matchedExternal = [];
+  dashboardCertsCache.forEach(c => {
+    if (!c.user_id && c.external_name && normKey(c.external_name).includes(term) && !seenKeys.has(c.external_key)) {
+      seenKeys.add(c.external_key);
+      matchedExternal.push(c);
+    }
+  });
+  let html = matchedUsers.map(u => renderLookupCard(u.ho_ten, u.id, null, u.phong_khoa)).join('');
+  html += matchedExternal.map(c => renderLookupCard(c.external_name, null, c.external_key, c.external_phong_khoa)).join('');
+  resultEl.innerHTML = html || `<div style="padding:12px 4px;color:var(--muted)">Không tìm thấy ai khớp tên này.</div>`;
+}
+
+function renderLookupCard(name, userId, externalKey, dept) {
+  const myCerts = dashboardCertsCache.filter(c => userId ? c.user_id === userId : c.external_key === externalKey);
+  const sumInCycle = (cy) => myCerts.filter(c => c.trang_thai_duyet === 'da_duyet' && c.ngay_cap && c.ngay_cap >= cy.start && c.ngay_cap <= cy.end).reduce((s, c) => s + (Number(c.so_gio_tin_chi) || 0), 0);
+  const sum120 = sumInCycle(cmeCycle120), sum48 = sumInCycle(cmeCycle48);
+  return `
+    <div class="panel" style="margin-bottom:12px;">
+      <div style="padding:14px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;">
+        <strong>${name}</strong><span style="color:var(--muted);font-size:12.5px;">${dept || (userId ? '' : 'chưa có tài khoản')}</span>
+      </div>
+      <div style="padding:10px 20px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);">
+        Chu kỳ 5 năm: <strong style="color:var(--ink)">${sum120}</strong> giờ &nbsp;·&nbsp; Chu kỳ 2 năm: <strong style="color:var(--ink)">${sum48}</strong> giờ &nbsp;·&nbsp; ${myCerts.length} dòng chứng chỉ
+      </div>
+      <table>
+        <thead><tr><th>Tên chứng chỉ</th><th>Ngày cấp</th><th>Số giờ</th><th>Trạng thái tính</th></tr></thead>
+        <tbody>
+          ${myCerts.map(c => {
+            const inR = c.ngay_cap && c.ngay_cap >= cmeCycle120.start && c.ngay_cap <= cmeCycle120.end;
+            const tag = !c.ngay_cap ? '<span style="color:var(--danger)">Thiếu ngày cấp — không tính</span>' : (c.trang_thai_duyet !== 'da_duyet' ? '<span style="color:var(--danger)">Chưa duyệt — không tính</span>' : (inR ? 'Tính vào chu kỳ 5 năm' : 'Ngoài khung chu kỳ 5 năm'));
+            return `<tr><td>${c.ten_chung_chi}</td><td>${fmtDate(c.ngay_cap)}</td><td>${c.so_gio_tin_chi != null ? c.so_gio_tin_chi : '—'}</td><td style="font-size:12.5px;">${tag}</td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderCycleBlockHTML(title, prefix, s) {
+  return `
+    <h3 style="font-size:17px;margin:30px 0 4px;">${title}</h3>
+    <p class="desc" style="margin-top:0;">Chu kỳ ${fmtDate(s.start)} – ${fmtDate(s.end)}, yêu cầu tối thiểu <strong>${s.required} giờ tín chỉ / người</strong>.</p>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="val">${s.tyLeDu}%</div><div class="lbl">Nhân viên đã đủ ${s.required} giờ (${s.soDu}/${s.tongNV})</div></div>
+      <div class="kpi-card"><div class="val ${s.soThieu > 0 ? 'bad' : ''}">${s.soThieu}</div><div class="lbl">Nhân viên còn thiếu giờ</div></div>
+      <div class="kpi-card"><div class="val ${s.tongGioThieu > 0 ? 'warn' : ''}">${s.tongGioThieu}</div><div class="lbl">Tổng số giờ còn thiếu toàn viện</div></div>
+      <div class="kpi-card"><div class="val">${s.tongNV}</div><div class="lbl">Tổng số người được theo dõi</div></div>
+    </div>
+    <p class="desc" style="margin:16px 0 6px;">Bấm vào tên khoa/phòng để xem danh sách CME của khoa đó</p>
+    <div class="panel">
+      ${s.deptRows.map(([dept, d], idx) => {
+        const pct = d.total ? Math.round((d.du / d.total) * 100) : 0;
+        const safeId = `${prefix}-dept-${idx}`;
+        return `<div>
+          <div class="bar-row" style="cursor:pointer;" onclick="toggleDeptDetail('${safeId}','${prefix}','${dept.replace(/'/g, "\\'")}')">
+            <span class="name" style="color:var(--accent-dark);text-decoration:underline;">${dept}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+            <span class="pct">${d.du}/${d.total} (${pct}%)</span>
+          </div>
+          <div id="detail-${safeId}" style="display:none;padding:0 20px 16px;"></div>
+        </div>`;
+      }).join('') || `<div style="padding:16px 20px;color:var(--muted)">Chưa có dữ liệu.</div>`}
+    </div>
+    <p class="desc" style="margin:16px 0 6px;">Top người thiếu giờ nhiều nhất — ưu tiên bố trí đào tạo</p>
+    <div class="panel">
+      <table>
+        <thead><tr><th>Họ tên</th><th>Phòng/Khoa</th><th>Đã đạt</th><th>Còn thiếu</th></tr></thead>
+        <tbody>
+          ${s.topThieu.length ? s.topThieu.map(p => `<tr><td>${p.name}</td><td>${p.dept}</td><td>${p.dat}</td><td style="color:var(--danger);font-weight:500;">${p.thieu}</td></tr>`).join('') : `<tr><td colspan="4" style="color:var(--muted)">Không có ai thiếu giờ.</td></tr>`}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function toggleDeptDetail(safeId, prefix, dept) {
+  const el = document.getElementById(`detail-${safeId}`);
+  if (!el) return;
+  if (el.style.display === 'block') { el.style.display = 'none'; return; }
+  const s = dashboardCycleStats[prefix];
+  const rows = s.people.filter(p => p.dept === dept).sort((a, b) => b.thieu - a.thieu);
+  el.innerHTML = `
+    <table>
+      <thead><tr><th>Họ tên</th><th>Đã đạt</th><th>Còn thiếu</th><th>Trạng thái</th></tr></thead>
+      <tbody>
+        ${rows.map(p => `<tr><td>${p.name}</td><td>${p.dat}</td><td>${p.thieu}</td><td>${p.du ? '<span class="status-tag da_xong">Đã đủ</span>' : '<span class="status-tag sap_dien_ra">Chưa đủ</span>'}</td></tr>`).join('')}
+      </tbody>
+    </table>`;
+  el.style.display = 'block';
+}
+
+async function renderOverviewSection(main) {
+  main.innerHTML = `<h2>Tổng quan CME</h2><p class="desc">Đang tải dữ liệu...</p>`;
+  await loadCmeCycles();
+  let users, certs;
+  try {
+    [users, certs] = await Promise.all([
+      sb(`dt_user_profiles?select=id,ho_ten,phong_khoa,chuc_vu,trang_thai,theo_doi_cme&trang_thai=eq.hoat_dong`),
+      sb(`dt_certificates?select=user_id,external_name,external_key,external_phong_khoa,external_loai_tru_cme,so_gio_tin_chi,ngay_cap,trang_thai_duyet,loai_chung_chi,ngay_het_han,ten_chung_chi`)
+    ]);
+  } catch (e) {
+    main.innerHTML = `<h2>Tổng quan CME</h2><p style="color:var(--danger)">Không tải được dữ liệu: ${e.message}</p>`;
+    return;
+  }
+  dashboardUsersCache = users;
+  dashboardCertsCache = certs;
+
+  const trackedUsers = users.filter(u => u.theo_doi_cme !== false);
+  const untrackedIds = new Set(users.filter(u => u.theo_doi_cme === false).map(u => u.id));
+  const certsForStats = certs.filter(c => (!c.user_id || !untrackedIds.has(c.user_id)) && !c.external_loai_tru_cme);
+
+  const s120 = computeCycleStats(trackedUsers, certsForStats, cmeCycle120);
+  const s48 = computeCycleStats(trackedUsers, certsForStats, cmeCycle48);
+  dashboardCycleStats = { c120: s120, c48: s48 };
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const expiringSoon = certsForStats.filter(c => {
+    if (c.trang_thai_duyet !== 'da_duyet' || !c.ngay_het_han) return false;
+    return Math.round((new Date(c.ngay_het_han) - today) / 86400000) <= 30;
+  }).length;
+
+  const missingDate = certsForStats.filter(c => c.trang_thai_duyet === 'da_duyet' && !c.ngay_cap && (Number(c.so_gio_tin_chi) || 0) > 0).length;
+
+  const byLoai = { cme: 0, cpe: 0, cne: 0 };
+  certsForStats.forEach(c => {
+    if (c.trang_thai_duyet !== 'da_duyet') return;
+    if (!c.ngay_cap || c.ngay_cap < cmeCycle120.start || c.ngay_cap > cmeCycle120.end) return;
+    byLoai[c.loai_chung_chi || 'cme'] += Number(c.so_gio_tin_chi) || 0;
+  });
+  const tongGioLoai = byLoai.cme + byLoai.cpe + byLoai.cne || 1;
+
+  main.innerHTML = `
+    <h2>Tổng quan CME</h2>
+    <p class="desc">Theo dõi tích luỹ giờ tín chỉ cập nhật kiến thức y khoa liên tục theo Thông tư 32/2023/TT-BYT. Người chưa có tài khoản trong hệ thống vẫn được đưa vào thống kê (hiển thị theo tên).</p>
+    ${missingDate > 0 ? `<div class="panel" style="border-color:var(--gold);background:#FBF6EC;padding:14px 20px;margin-bottom:18px;">
+      <strong style="color:#8A6A1F;">${missingDate} chứng chỉ đang có số giờ nhưng thiếu Ngày cấp</strong> — những chứng chỉ này <u>chưa được tính</u> vào cả 2 chu kỳ bên dưới. Bổ sung ngày cấp để thống kê chính xác hơn.
+      <button class="btn-cancel" style="margin-left:10px;" onclick="renderCertsAdminSection(document.getElementById('main-content')).then(() => { document.getElementById('cert-filter-missingdate').checked = true; onCertFilterMissingDate(true); })">Xem danh sách chứng chỉ</button>
+    </div>` : ''}
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="val ${expiringSoon > 0 ? 'warn' : ''}">${expiringSoon}</div><div class="lbl">Chứng chỉ sắp/đã hết hạn (≤30 ngày)</div></div>
+      <div class="kpi-card"><div class="val">${byLoai.cme}</div><div class="lbl">Giờ CME (chu kỳ 5 năm)</div></div>
+      <div class="kpi-card"><div class="val">${byLoai.cpe}</div><div class="lbl">Giờ CPE (chu kỳ 5 năm)</div></div>
+      <div class="kpi-card"><div class="val">${byLoai.cne}</div><div class="lbl">Giờ CNE (chu kỳ 5 năm)</div></div>
+    </div>
+
+    <h3 style="font-size:16px;margin:24px 0 10px;">Tra cứu cá nhân</h3>
+    <input id="lookup-input" placeholder="Gõ tên để xem chi tiết số giờ và từng chứng chỉ của 1 người..." style="width:100%;max-width:420px;padding:9px 12px;border:1px solid var(--line);border-radius:3px;font-size:13.5px;margin-bottom:14px;" oninput="onLookupInput(this.value)">
+    <div id="lookup-result"></div>
+
+    ${renderCycleBlockHTML('Chu kỳ 5 năm — tối thiểu 120 giờ tín chỉ', 'c120', s120)}
+    ${renderCycleBlockHTML('Chu kỳ 2 năm — tối thiểu 48 giờ tín chỉ', 'c48', s48)}
+
+    <h3 style="font-size:16px;margin:30px 0 10px;">Cấu hình chu kỳ đánh giá</h3>
+    <div class="panel" style="margin-bottom:16px;">
+      <p class="desc" style="padding:14px 20px 0;margin:0;">Chu kỳ 5 năm (mặc định theo Thông tư 32/2023/TT-BYT: 120 giờ / 5 năm)</p>
+      <div class="settings-row">
+        <div><label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;">Bắt đầu</label><input id="c120-start" type="date" value="${cmeCycle120.start}" style="padding:8px 10px;border:1px solid var(--line);border-radius:3px;"></div>
+        <div><label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;">Kết thúc</label><input id="c120-end" type="date" value="${cmeCycle120.end}" style="padding:8px 10px;border:1px solid var(--line);border-radius:3px;"></div>
+        <div><label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;">Số giờ yêu cầu</label><input id="c120-hours" type="number" value="${cmeCycle120.required_hours}" style="padding:8px 10px;border:1px solid var(--line);border-radius:3px;width:100px;"></div>
+        <button class="btn-save" onclick="onSaveCycle('cme_cycle','c120')">Lưu</button>
+      </div>
+    </div>
+    <div class="panel">
+      <p class="desc" style="padding:14px 20px 0;margin:0;">Chu kỳ 2 năm (tuỳ chọn theo quy định/chính sách riêng của viện)</p>
+      <div class="settings-row">
+        <div><label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;">Bắt đầu</label><input id="c48-start" type="date" value="${cmeCycle48.start}" style="padding:8px 10px;border:1px solid var(--line);border-radius:3px;"></div>
+        <div><label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;">Kết thúc</label><input id="c48-end" type="date" value="${cmeCycle48.end}" style="padding:8px 10px;border:1px solid var(--line);border-radius:3px;"></div>
+        <div><label style="display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;">Số giờ yêu cầu</label><input id="c48-hours" type="number" value="${cmeCycle48.required_hours}" style="padding:8px 10px;border:1px solid var(--line);border-radius:3px;width:100px;"></div>
+        <button class="btn-save" onclick="onSaveCycle('cme_cycle_48','c48')">Lưu</button>
+      </div>
+    </div>`;
+}
+
+async function onSaveCycle(key, prefix) {
+  const start = document.getElementById(`${prefix}-start`).value;
+  const end = document.getElementById(`${prefix}-end`).value;
+  const hours = Number(document.getElementById(`${prefix}-hours`).value) || 0;
+  try {
+    await saveCycleSetting(key, start, end, hours);
+    await renderOverviewSection(document.getElementById('main-content'));
+  } catch (e) {
+    alert('Không lưu được cấu hình: ' + e.message);
+  }
+}
+
+// ---------- Quản lý người dùng (admin) ----------
+let allUsersCache = [];
+let passwordIds = new Set();
+let openEditId = null;
+
+async function loadPasswordIds() {
+  try {
+    const rows = await sb('rpc/dt_password_ids', { method: 'POST', body: JSON.stringify({}) });
+    return new Set((rows || []).map(r => (typeof r === 'object' && r !== null) ? Object.values(r)[0] : r));
+  } catch (e) { return new Set(); }
+}
+
+async function renderUsersSection(main) {
+  main.innerHTML = `
+    <h2>Người dùng</h2>
+    <p class="desc">Thêm và quản lý tài khoản học viên / quản trị viên.</p>
+    <div class="toolbar">
+      <input id="user-search" placeholder="Tìm theo mã số, họ tên, phòng/khoa, chức vụ..." style="flex:1;max-width:340px;padding:9px 12px;border:1px solid var(--line);border-radius:3px;font-size:13.5px;" oninput="filterUsers(this.value)">
+      <div style="display:flex;gap:10px;">
+        <button class="btn-cancel" onclick="downloadUserTemplate()">Tải file mẫu</button>
+        <button class="btn-cancel" onclick="document.getElementById('user-excel-input').click()">Nhập từ Excel</button>
+        <input type="file" id="user-excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleUserExcelImport(event)">
+        <button class="btn-add" onclick="toggleAddUserForm()">Thêm người dùng</button>
+      </div>
+    </div>
+    <div id="add-user-form-holder"></div>
+    <div class="panel" id="users-panel">
+      <table>
+        <thead><tr>
+          <th>Mã số NV</th><th>Họ tên</th><th>Phòng/Khoa</th><th>Chức vụ</th><th>SĐT</th><th>Vai trò</th><th>Trạng thái</th><th></th>
+        </tr></thead>
+        <tbody id="users-tbody"><tr><td colspan="8" style="color:var(--muted)">Đang tải...</td></tr></tbody>
+      </table>
+    </div>`;
+  openEditId = null;
+  await loadUsers();
+}
+
+async function loadUsers() {
+  const tbody = document.getElementById('users-tbody');
+  try {
+    const [rows, pwIds] = await Promise.all([
+      sb(`dt_user_profiles?select=${USER_COLS}&order=created_at.desc`),
+      loadPasswordIds()
+    ]);
+    passwordIds = pwIds;
+    allUsersCache = rows;
+    renderUserRows(rows);
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="8" style="color:var(--danger)">Không tải được danh sách. ${e.message}</td></tr>`;
+  }
+}
+
+function filterUsers(term) {
+  const q = normKey(term || '');
+  if (!q) { renderUserRows(allUsersCache); return; }
+  const filtered = allUsersCache.filter(u =>
+    normKey(u.ma_so_nhan_vien).includes(q) ||
+    normKey(u.ho_ten).includes(q) ||
+    normKey(u.phong_khoa || '').includes(q) ||
+    normKey(u.chuc_vu || '').includes(q)
+  );
+  renderUserRows(filtered);
+}
+
+function userRowHTML(u) {
+  const active = u.trang_thai !== 'ngung_hoat_dong';
+  return `
+    <tr id="user-row-${u.id}">
+      <td>${u.ma_so_nhan_vien}</td>
+      <td>${u.ho_ten}</td>
+      <td>${u.phong_khoa || '—'}</td>
+      <td>${u.chuc_vu || '—'}</td>
+      <td>${u.so_dien_thoai || '—'}</td>
+      <td><span class="role-tag ${u.vai_tro}">${u.vai_tro === 'admin' ? 'Quản trị viên' : 'Học viên'}</span>${passwordIds.has(u.id) ? ' 🔒' : ''}${u.theo_doi_cme === false ? '<br><span style="color:var(--muted);font-size:11px;">Không theo dõi CME</span>' : ''}</td>
+      <td>${active ? '<span class="status-tag dang_dien_ra">Hoạt động</span>' : '<span class="status-tag da_xong">Ngừng hoạt động</span>'}</td>
+      <td class="row-actions">
+        <button onclick="editUserInline('${u.id}')">Sửa</button>
+        <button onclick="toggleUserStatus('${u.id}', ${active})">${active ? 'Ngừng' : 'Kích hoạt'}</button>
+        <button class="del" onclick="deleteUser('${u.id}','${u.ho_ten.replace(/'/g, "\\'")}')">Xoá vĩnh viễn</button>
+      </td>
+    </tr>`;
+}
+
+function renderUserRows(rows) {
+  const tbody = document.getElementById('users-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="color:var(--muted)">Không tìm thấy người dùng nào.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(userRowHTML).join('');
+}
+
+// ---------- Thêm mới (form trên đầu trang) ----------
+function toggleAddUserForm() {
+  const holder = document.getElementById('add-user-form-holder');
+  if (holder.innerHTML) { holder.innerHTML = ''; return; }
+  holder.innerHTML = `
+    <div class="panel" style="margin-bottom:16px;">
+      <div class="form-grid">
+        <p class="form-err" id="add-form-err"></p>
+        <div><label>Mã số nhân viên *</label><input id="add-maso" placeholder="VD: DKTK0163"></div>
+        <div><label>Họ tên *</label><input id="add-hoten"></div>
+        <div><label>Phòng/Khoa</label><input id="add-phongkhoa"></div>
+        <div><label>Chức vụ</label><input id="add-chucvu"></div>
+        <div><label>Số điện thoại</label><input id="add-sdt"></div>
+        <div><label>Vai trò</label>
+          <select id="add-vaitro"><option value="hoc_vien">Học viên</option><option value="admin">Quản trị viên</option></select>
+        </div>
+        <div class="full">
+          <label style="display:flex;align-items:center;gap:7px;"><input type="checkbox" id="add-theodoi-cme" style="width:auto;" checked> Theo dõi CME (bỏ tick nếu là nhân sự không thuộc khối chuyên môn, VD Ban giám đốc/Nhân sự không hành nghề khám chữa bệnh)</label>
+        </div>
+        <div class="full">
+          <label style="display:flex;align-items:center;gap:7px;"><input type="checkbox" id="add-needpw" style="width:auto;" onchange="document.getElementById('add-pw-wrap').style.display = this.checked ? 'block' : 'none'"> Yêu cầu mật khẩu để đăng nhập</label>
+        </div>
+        <div class="full" id="add-pw-wrap" style="display:none;">
+          <label>Mật khẩu</label><input id="add-password" type="text" placeholder="Nhập mật khẩu">
+        </div>
+        <div class="form-actions">
+          <button class="btn-save" onclick="saveNewUser()">Lưu</button>
+          <button class="btn-cancel" onclick="toggleAddUserForm()">Huỷ</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('add-maso').focus();
+}
+
+async function saveNewUser() {
+  const errEl = document.getElementById('add-form-err');
+  errEl.style.display = 'none';
+  const maso = document.getElementById('add-maso').value.trim().toUpperCase();
+  const hoten = document.getElementById('add-hoten').value.trim();
+  const needPw = document.getElementById('add-needpw').checked;
+  const pwVal = document.getElementById('add-password').value.trim();
+  if (!maso || !hoten) {
+    errEl.textContent = 'Vui lòng nhập đủ Mã số nhân viên và Họ tên.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (needPw && !pwVal) {
+    errEl.textContent = 'Vui lòng nhập mật khẩu cho tài khoản này.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const payload = {
+    ma_so_nhan_vien: maso,
+    ho_ten: hoten,
+    phong_khoa: document.getElementById('add-phongkhoa').value.trim() || null,
+    chuc_vu: document.getElementById('add-chucvu').value.trim() || null,
+    so_dien_thoai: document.getElementById('add-sdt').value.trim() || null,
+    vai_tro: document.getElementById('add-vaitro').value,
+    theo_doi_cme: document.getElementById('add-theodoi-cme').checked
+  };
+  try {
+    const rows = await sb(`dt_user_profiles?select=${USER_COLS}`, { method: 'POST', body: JSON.stringify(payload) });
+    const targetId = rows[0].id;
+    if (needPw && pwVal) {
+      await sb('rpc/dt_set_password', { method: 'POST', body: JSON.stringify({ p_id: targetId, p_mat_khau: pwVal }) });
+    }
+    toggleAddUserForm();
+    await loadUsers();
+  } catch (e) {
+    errEl.textContent = e.message.includes('duplicate') ? 'Mã số nhân viên này đã tồn tại.' : 'Có lỗi xảy ra: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ---------- Sửa tại chỗ (không nhảy vị trí trang) ----------
+function editUserInline(id) {
+  if (openEditId && openEditId !== id) closeInlineEdit(openEditId);
+  const existing = document.getElementById(`edit-row-${id}`);
+  if (existing) { closeInlineEdit(id); return; }
+  const u = allUsersCache.find(x => x.id === id);
+  if (!u) return;
+  const row = document.getElementById(`user-row-${id}`);
+  const hasPw = passwordIds.has(id);
+  const html = `
+    <tr id="edit-row-${id}"><td colspan="8">
+      <div class="form-grid" style="border-bottom:none;padding:16px 4px;">
+        <p class="form-err" id="edit-err-${id}"></p>
+        <div><label>Mã số nhân viên</label><input value="${u.ma_so_nhan_vien}" disabled></div>
+        <div><label>Họ tên *</label><input id="edit-hoten-${id}" value="${u.ho_ten}"></div>
+        <div><label>Phòng/Khoa</label><input id="edit-phongkhoa-${id}" value="${u.phong_khoa || ''}"></div>
+        <div><label>Chức vụ</label><input id="edit-chucvu-${id}" value="${u.chuc_vu || ''}"></div>
+        <div><label>Số điện thoại</label><input id="edit-sdt-${id}" value="${u.so_dien_thoai || ''}"></div>
+        <div><label>Vai trò</label>
+          <select id="edit-vaitro-${id}">
+            <option value="hoc_vien" ${u.vai_tro === 'hoc_vien' ? 'selected' : ''}>Học viên</option>
+            <option value="admin" ${u.vai_tro === 'admin' ? 'selected' : ''}>Quản trị viên</option>
+          </select>
+        </div>
+        <div class="full">
+          <label style="display:flex;align-items:center;gap:7px;"><input type="checkbox" id="edit-theodoicme-${id}" style="width:auto;" ${u.theo_doi_cme !== false ? 'checked' : ''}> Theo dõi CME (bỏ tick nếu là nhân sự không thuộc khối chuyên môn)</label>
+        </div>
+        <div class="full">
+          <label style="display:flex;align-items:center;gap:7px;"><input type="checkbox" id="edit-needpw-${id}" style="width:auto;" ${hasPw ? 'checked' : ''} onchange="document.getElementById('edit-pw-wrap-${id}').style.display = this.checked ? 'block' : 'none'"> Yêu cầu mật khẩu để đăng nhập</label>
+        </div>
+        <div class="full" id="edit-pw-wrap-${id}" style="display:${hasPw ? 'block' : 'none'}">
+          <label>Mật khẩu${hasPw ? ' (để trống nếu giữ nguyên mật khẩu cũ)' : ''}</label>
+          <input id="edit-password-${id}" type="text" placeholder="Nhập mật khẩu">
+        </div>
+        <div class="form-actions">
+          <button class="btn-save" onclick="saveUserInline('${id}')">Lưu</button>
+          <button class="btn-cancel" onclick="closeInlineEdit('${id}')">Huỷ</button>
+        </div>
+      </div>
+    </td></tr>`;
+  row.insertAdjacentHTML('afterend', html);
+  openEditId = id;
+  document.getElementById(`edit-hoten-${id}`).focus();
+}
+
+function closeInlineEdit(id) {
+  const el = document.getElementById(`edit-row-${id}`);
+  if (el) el.remove();
+  if (openEditId === id) openEditId = null;
+}
+
+async function saveUserInline(id) {
+  const errEl = document.getElementById(`edit-err-${id}`);
+  errEl.style.display = 'none';
+  const hoten = document.getElementById(`edit-hoten-${id}`).value.trim();
+  if (!hoten) {
+    errEl.textContent = 'Họ tên không được để trống.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const needPw = document.getElementById(`edit-needpw-${id}`).checked;
+  const pwVal = document.getElementById(`edit-password-${id}`).value.trim();
+  const hadPw = passwordIds.has(id);
+  if (needPw && !pwVal && !hadPw) {
+    errEl.textContent = 'Vui lòng nhập mật khẩu cho tài khoản này.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const payload = {
+    ho_ten: hoten,
+    phong_khoa: document.getElementById(`edit-phongkhoa-${id}`).value.trim() || null,
+    chuc_vu: document.getElementById(`edit-chucvu-${id}`).value.trim() || null,
+    so_dien_thoai: document.getElementById(`edit-sdt-${id}`).value.trim() || null,
+    vai_tro: document.getElementById(`edit-vaitro-${id}`).value,
+    theo_doi_cme: document.getElementById(`edit-theodoicme-${id}`).checked
+  };
+  try {
+    await sb(`dt_user_profiles?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(payload), prefer: 'return=minimal' });
+    if (needPw && pwVal) {
+      await sb('rpc/dt_set_password', { method: 'POST', body: JSON.stringify({ p_id: id, p_mat_khau: pwVal }) });
+      passwordIds.add(id);
+    } else if (!needPw && hadPw) {
+      await sb('rpc/dt_set_password', { method: 'POST', body: JSON.stringify({ p_id: id, p_mat_khau: null }) });
+      passwordIds.delete(id);
+    }
+    const idx = allUsersCache.findIndex(x => x.id === id);
+    if (idx > -1) allUsersCache[idx] = { ...allUsersCache[idx], ...payload };
+    closeInlineEdit(id);
+    document.getElementById(`user-row-${id}`).outerHTML = userRowHTML(allUsersCache[idx]);
+  } catch (e) {
+    errEl.textContent = 'Có lỗi xảy ra: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ---------- Ngừng / Kích hoạt / Xoá vĩnh viễn ----------
+async function toggleUserStatus(id, isCurrentlyActive) {
+  const u = allUsersCache.find(x => x.id === id);
+  const newStatus = isCurrentlyActive ? 'ngung_hoat_dong' : 'hoat_dong';
+  const confirmMsg = isCurrentlyActive
+    ? `Ngừng hoạt động tài khoản "${u ? u.ho_ten : ''}"? Người này sẽ không đăng nhập được nữa, nhưng toàn bộ dữ liệu và lịch sử học vẫn được giữ nguyên. Có thể kích hoạt lại bất cứ lúc nào.`
+    : `Kích hoạt lại tài khoản "${u ? u.ho_ten : ''}"?`;
+  if (!confirm(confirmMsg)) return;
+  try {
+    await sb(`dt_user_profiles?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ trang_thai: newStatus }), prefer: 'return=minimal' });
+    const idx = allUsersCache.findIndex(x => x.id === id);
+    if (idx > -1) {
+      allUsersCache[idx] = { ...allUsersCache[idx], trang_thai: newStatus };
+      document.getElementById(`user-row-${id}`).outerHTML = userRowHTML(allUsersCache[idx]);
+    }
+  } catch (e) {
+    alert('Có lỗi xảy ra: ' + e.message);
+  }
+}
+
+async function deleteUser(id, name) {
+  if (!confirm(`Xoá VĨNH VIỄN tài khoản "${name}"? Toàn bộ thông tin tài khoản sẽ mất hẳn, không thể khôi phục.\n\nNếu chỉ muốn tạm khoá (ví dụ học viên nghỉ việc) nhưng vẫn giữ lịch sử học, hãy dùng nút "Ngừng" thay vì xoá.`)) return;
+  try {
+    await sb(`dt_user_profiles?id=eq.${id}`, { method: 'DELETE', prefer: 'return=minimal' });
+    allUsersCache = allUsersCache.filter(x => x.id !== id);
+    const row = document.getElementById(`user-row-${id}`);
+    if (row) row.remove();
+    closeInlineEdit(id);
+  } catch (e) {
+    alert('Không xoá được: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>
