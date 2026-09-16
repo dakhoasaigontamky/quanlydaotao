@@ -2114,10 +2114,12 @@ function diffYearsFromToday(dateStr) {
 
 async function exportCmeReport() {
   try {
-    const [users, certs] = await Promise.all([
+    const [users, certs, cycleRows] = await Promise.all([
       sb(`dt_user_profiles?select=id,ma_so_nhan_vien,ho_ten,chuc_vu,ngay_cap_cchn,trang_thai,theo_doi_cme&trang_thai=eq.hoat_dong`),
-      sb(`dt_certificates?select=user_id,so_gio_tin_chi,ngay_cap,loai_chung_chi,trang_thai_duyet`)
+      sb(`dt_certificates?select=user_id,so_gio_tin_chi,ngay_cap,loai_chung_chi,trang_thai_duyet`),
+      sb(`dt_settings?key=eq.cme_cycle_48&select=value`)
     ]);
+    const cycle48 = (cycleRows && cycleRows[0]) ? cycleRows[0].value : { start: '2025-01-01', end: '2026-12-31', required_hours: 48 };
     const tracked = users.filter(u => u.theo_doi_cme !== false);
     const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -2133,32 +2135,52 @@ async function exportCmeReport() {
       const canBoSung = Math.max(0, target2026 - soTiet);
       const tienDo = Math.round((soTiet / 120) * 1000000) / 1000000;
 
+      const soTiet2Nam = myCerts
+        .filter(c => c.ngay_cap && c.ngay_cap >= cycle48.start && c.ngay_cap <= cycle48.end)
+        .reduce((s, c) => s + (Number(c.so_gio_tin_chi) || 0), 0);
+
       const isDuocSi = normKey(u.chuc_vu || '').includes('duoc si');
-      let tinhTrang;
+      let tinhTrang, mau;
       if (isDuocSi) {
         const cpeDates = myCerts.filter(c => c.loai_chung_chi === 'cpe' && c.ngay_cap).map(c => c.ngay_cap).sort().reverse();
         const latestCpe = cpeDates[0];
         const cchnOk = cchn && diffYearsFromToday(cchn) <= 3;
         const cpeOk = latestCpe && diffYearsFromToday(latestCpe) <= 3;
-        tinhTrang = (cchnOk || cpeOk) ? 'Hoàn thành' : 'Cảnh báo';
+        if (cchnOk || cpeOk) { tinhTrang = 'Hoàn thành'; mau = 'green'; }
+        else { tinhTrang = 'Cảnh báo'; mau = 'red'; }
+      } else if (soTiet >= 120) {
+        tinhTrang = 'Hoàn thành'; mau = 'green';
+      } else if (soTiet2Nam >= (Number(cycle48.required_hours) || 48)) {
+        tinhTrang = 'Đạt tiến độ'; mau = 'yellow';
       } else {
-        tinhTrang = soTiet >= target2026 ? 'Hoàn thành' : (soTiet >= target2026 * 0.5 ? 'Đạt tiến độ' : 'Cảnh báo');
+        tinhTrang = 'Cảnh báo'; mau = 'red';
       }
+      const dotMap = { green: '🟢', yellow: '🟡', red: '🔴' };
 
-      return [idx + 1, 'MSG DKTK', u.ma_so_nhan_vien, u.ho_ten, u.chuc_vu || '', '', Math.round(soTiet * 100) / 100, tinhTrang, cchn || '', tienDo, Math.round(canBoSung * 100) / 100];
+      return { data: [idx + 1, 'MSG DKTK', u.ma_so_nhan_vien, u.ho_ten, u.chuc_vu || '', '', Math.round(soTiet * 100) / 100, `${dotMap[mau]} ${tinhTrang}`, cchn || '', tienDo, Math.round(canBoSung * 100) / 100], mau };
     });
 
     const wsData = [
       ['TỔNG HỢP THEO DÕI ĐÀO TẠO CHUYÊN MÔN LIÊN TỤC'],
       ['Stt', 'BV/PK', 'Mã NV (HRM)', 'Họ tên nhân viên', 'Chức danh', 'Đối tượng', 'Số tiết', 'Tình trạng cập nhật CME', 'Ngày cấp CCHN', 'Tiến độ so với 5 năm', 'Số tiết cần bổ sung 2026'],
-      ...rows
+      ...rows.map(r => r.data)
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } }];
-    ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 14 }, { wch: 26 }, { wch: 26 }, { wch: 12 }, { wch: 10 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 20 }];
+    ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 14 }, { wch: 26 }, { wch: 26 }, { wch: 12 }, { wch: 10 }, { wch: 24 }, { wch: 14 }, { wch: 16 }, { wch: 20 }];
+
+    // Cố gắng tô màu nền ô (nếu trình đọc Excel hỗ trợ)
+    const colorHex = { green: 'C6EFCE', yellow: 'FFEB9C', red: 'FFC7CE' };
+    rows.forEach((r, i) => {
+      const addr = XLSX.utils.encode_cell({ r: i + 2, c: 7 }); // dòng data bắt đầu từ r=2 (sau title + header)
+      if (ws[addr]) {
+        ws[addr].s = { fill: { patternType: 'solid', fgColor: { rgb: colorHex[r.mau] }, bgColor: { rgb: colorHex[r.mau] } } };
+      }
+    });
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo CME');
-    XLSX.writeFile(wb, `bao_cao_CME_${todayStr}.xlsx`);
+    XLSX.writeFile(wb, `bao_cao_CME_${todayStr}.xlsx`, { cellStyles: true });
   } catch (e) {
     alert('Xuất báo cáo thất bại: ' + e.message);
   }
