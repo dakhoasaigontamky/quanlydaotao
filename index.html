@@ -227,7 +227,7 @@ const HOCVIEN_NAV = [
 
 const TRANG_THAI_LABEL = { sap_dien_ra: 'Sắp diễn ra', dang_dien_ra: 'Đang diễn ra', da_xong: 'Đã xong' };
 
-const USER_COLS = 'id,ma_so_nhan_vien,ho_ten,phong_khoa,chuc_vu,so_dien_thoai,vai_tro,created_at,trang_thai,theo_doi_cme';
+const USER_COLS = 'id,ma_so_nhan_vien,ho_ten,phong_khoa,chuc_vu,so_dien_thoai,vai_tro,created_at,trang_thai,theo_doi_cme,ngay_cap_cchn';
 
 // ---------- Helper đọc file Excel ----------
 function normKey(k) {
@@ -1046,8 +1046,8 @@ async function toggleStudentMaterials(courseId) {
 // ---------- Import người dùng từ Excel ----------
 function downloadUserTemplate() {
   const wsData = [
-    ['Mã số nhân viên', 'Họ tên', 'Phòng/Khoa', 'Chức vụ', 'Số điện thoại', 'Vai trò'],
-    ['DKTK0163', 'Nguyễn Thị A', 'Quản lý chất lượng', 'Nhân viên', '0900000000', 'Học viên']
+    ['Mã số nhân viên', 'Họ tên', 'Phòng/Khoa', 'Chức vụ', 'Số điện thoại', 'Vai trò', 'Ngày cấp CCHN'],
+    ['DKTK0163', 'Nguyễn Thị A', 'Quản lý chất lượng', 'Nhân viên', '0900000000', 'Học viên', '15/03/2020']
   ];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   const wb = XLSX.utils.book_new();
@@ -1061,7 +1061,8 @@ const USER_COL_ALIASES = {
   'phong/khoa': 'phong_khoa', 'phong khoa': 'phong_khoa', 'khoa': 'phong_khoa', 'phong': 'phong_khoa',
   'chuc vu': 'chuc_vu',
   'so dien thoai': 'so_dien_thoai', 'dien thoai': 'so_dien_thoai', 'sdt': 'so_dien_thoai',
-  'vai tro': 'vai_tro', 'quyen': 'vai_tro'
+  'vai tro': 'vai_tro', 'quyen': 'vai_tro',
+  'ngay cap cchn': 'ngay_cap_cchn', 'ngay cchn': 'ngay_cap_cchn', 'cchn': 'ngay_cap_cchn'
 };
 
 function mapRowToUser(row) {
@@ -1090,7 +1091,8 @@ async function handleUserExcelImport(event) {
         phong_khoa: m.phong_khoa || '',
         chuc_vu: m.chuc_vu || '',
         so_dien_thoai: m.so_dien_thoai || '',
-        vai_tro_raw: m.vai_tro || ''
+        vai_tro_raw: m.vai_tro || '',
+        ngay_cap_cchn_raw: m.ngay_cap_cchn || ''
       });
     });
     if (!parsed.length) {
@@ -1110,13 +1112,15 @@ async function handleUserExcelImport(event) {
       const existing = existingByMaso[p.ma_so_nhan_vien];
       const vaiTroNorm = normKey(p.vai_tro_raw);
       const vaiTroFromFile = vaiTroNorm ? ((vaiTroNorm.includes('admin') || vaiTroNorm.includes('quan tri')) ? 'admin' : 'hoc_vien') : null;
+      const cchnParsed = p.ngay_cap_cchn_raw ? parseFlexibleDate(p.ngay_cap_cchn_raw) : null;
       return {
         ma_so_nhan_vien: p.ma_so_nhan_vien,
         ho_ten: p.ho_ten,
         phong_khoa: p.phong_khoa || (existing ? existing.phong_khoa : null),
         chuc_vu: p.chuc_vu || (existing ? existing.chuc_vu : null),
         so_dien_thoai: p.so_dien_thoai || (existing ? existing.so_dien_thoai : null),
-        vai_tro: vaiTroFromFile || (existing ? existing.vai_tro : 'hoc_vien')
+        vai_tro: vaiTroFromFile || (existing ? existing.vai_tro : 'hoc_vien'),
+        ngay_cap_cchn: cchnParsed || (existing ? existing.ngay_cap_cchn : null)
       };
     });
 
@@ -2048,7 +2052,7 @@ async function renderOverviewSection(main) {
   const tongGioLoai = byLoai.cme + byLoai.cpe + byLoai.cne || 1;
 
   main.innerHTML = `
-    <h2>Tổng quan CME</h2>
+    <div class="toolbar"><h2 style="margin:0;">Tổng quan CME</h2><button class="btn-cancel" onclick="exportCmeReport()">Xuất báo cáo Excel</button></div>
     <p class="desc">Theo dõi tích luỹ giờ tín chỉ cập nhật kiến thức y khoa liên tục theo Thông tư 32/2023/TT-BYT. Người chưa có tài khoản trong hệ thống vẫn được đưa vào thống kê (hiển thị theo tên).</p>
     ${missingDate > 0 ? `<div class="panel" style="border-color:var(--gold);background:#FBF6EC;padding:14px 20px;margin-bottom:18px;">
       <strong style="color:#8A6A1F;">${missingDate} chứng chỉ đang có số giờ nhưng thiếu Ngày cấp</strong> — những chứng chỉ này <u>chưa được tính</u> vào cả 2 chu kỳ bên dưới. Bổ sung ngày cấp để thống kê chính xác hơn.
@@ -2098,6 +2102,65 @@ async function onSaveCycle(key, prefix) {
     await renderOverviewSection(document.getElementById('main-content'));
   } catch (e) {
     alert('Không lưu được cấu hình: ' + e.message);
+  }
+}
+
+// ---------- Xuất báo cáo CME dạng Excel ----------
+function diffYearsFromToday(dateStr) {
+  const d = new Date(dateStr);
+  const today = new Date();
+  return (today - d) / (365.25 * 86400 * 1000);
+}
+
+async function exportCmeReport() {
+  try {
+    const [users, certs] = await Promise.all([
+      sb(`dt_user_profiles?select=id,ma_so_nhan_vien,ho_ten,chuc_vu,ngay_cap_cchn,trang_thai,theo_doi_cme&trang_thai=eq.hoat_dong`),
+      sb(`dt_certificates?select=user_id,so_gio_tin_chi,ngay_cap,loai_chung_chi,trang_thai_duyet`)
+    ]);
+    const tracked = users.filter(u => u.theo_doi_cme !== false);
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const rows = tracked.map((u, idx) => {
+      const myCerts = certs.filter(c => c.user_id === u.id && c.trang_thai_duyet === 'da_duyet');
+      const cchn = u.ngay_cap_cchn;
+      const effectiveStart = (cchn && cchn > '2024-01-01') ? cchn : '2024-01-01';
+      const yearsElapsed = Math.max(1, 2026 - parseInt(effectiveStart.slice(0, 4)) + 1);
+      const target2026 = 24 * yearsElapsed;
+      const soTiet = myCerts
+        .filter(c => c.ngay_cap && c.ngay_cap >= effectiveStart && c.ngay_cap <= todayStr)
+        .reduce((s, c) => s + (Number(c.so_gio_tin_chi) || 0), 0);
+      const canBoSung = Math.max(0, target2026 - soTiet);
+      const tienDo = Math.round((soTiet / 120) * 1000000) / 1000000;
+
+      const isDuocSi = normKey(u.chuc_vu || '').includes('duoc si');
+      let tinhTrang;
+      if (isDuocSi) {
+        const cpeDates = myCerts.filter(c => c.loai_chung_chi === 'cpe' && c.ngay_cap).map(c => c.ngay_cap).sort().reverse();
+        const latestCpe = cpeDates[0];
+        const cchnOk = cchn && diffYearsFromToday(cchn) <= 3;
+        const cpeOk = latestCpe && diffYearsFromToday(latestCpe) <= 3;
+        tinhTrang = (cchnOk || cpeOk) ? 'Hoàn thành' : 'Cảnh báo';
+      } else {
+        tinhTrang = soTiet >= target2026 ? 'Hoàn thành' : (soTiet >= target2026 * 0.5 ? 'Đạt tiến độ' : 'Cảnh báo');
+      }
+
+      return [idx + 1, 'MSG DKTK', u.ma_so_nhan_vien, u.ho_ten, u.chuc_vu || '', '', Math.round(soTiet * 100) / 100, tinhTrang, cchn || '', tienDo, Math.round(canBoSung * 100) / 100];
+    });
+
+    const wsData = [
+      ['TỔNG HỢP THEO DÕI ĐÀO TẠO CHUYÊN MÔN LIÊN TỤC'],
+      ['Stt', 'BV/PK', 'Mã NV (HRM)', 'Họ tên nhân viên', 'Chức danh', 'Đối tượng', 'Số tiết', 'Tình trạng cập nhật CME', 'Ngày cấp CCHN', 'Tiến độ so với 5 năm', 'Số tiết cần bổ sung 2026'],
+      ...rows
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } }];
+    ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 14 }, { wch: 26 }, { wch: 26 }, { wch: 12 }, { wch: 10 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 20 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo CME');
+    XLSX.writeFile(wb, `bao_cao_CME_${todayStr}.xlsx`);
+  } catch (e) {
+    alert('Xuất báo cáo thất bại: ' + e.message);
   }
 }
 
