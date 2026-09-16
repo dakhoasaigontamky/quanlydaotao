@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
   :root{
     --bg:#F5F6F2;
@@ -2155,32 +2156,47 @@ async function exportCmeReport() {
       } else {
         tinhTrang = 'Cảnh báo'; mau = 'red';
       }
-      const dotMap = { green: '🟢', yellow: '🟡', red: '🔴' };
 
-      return { data: [idx + 1, 'MSG DKTK', u.ma_so_nhan_vien, u.ho_ten, u.chuc_vu || '', '', Math.round(soTiet * 100) / 100, `${dotMap[mau]} ${tinhTrang}`, cchn || '', tienDo, Math.round(canBoSung * 100) / 100], mau };
+      return { data: [idx + 1, 'MSG DKTK', u.ma_so_nhan_vien, u.ho_ten, u.chuc_vu || '', '', Math.round(soTiet * 100) / 100, tinhTrang, cchn || '', tienDo, Math.round(canBoSung * 100) / 100], mau };
     });
 
-    const wsData = [
-      ['TỔNG HỢP THEO DÕI ĐÀO TẠO CHUYÊN MÔN LIÊN TỤC'],
-      ['Stt', 'BV/PK', 'Mã NV (HRM)', 'Họ tên nhân viên', 'Chức danh', 'Đối tượng', 'Số tiết', 'Tình trạng cập nhật CME', 'Ngày cấp CCHN', 'Tiến độ so với 5 năm', 'Số tiết cần bổ sung 2026'],
-      ...rows.map(r => r.data)
+    const colorArgb = { green: 'FFC6EFCE', yellow: 'FFFFEB9C', red: 'FFFFC7CE' };
+    const fontArgb = { green: 'FF006100', yellow: 'FF9C6500', red: 'FF9C0006' };
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Báo cáo CME');
+    ws.columns = [
+      { width: 5 }, { width: 10 }, { width: 14 }, { width: 26 }, { width: 26 },
+      { width: 12 }, { width: 10 }, { width: 22 }, { width: 14 }, { width: 16 }, { width: 20 }
     ];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } }];
-    ws['!cols'] = [{ wch: 5 }, { wch: 10 }, { wch: 14 }, { wch: 26 }, { wch: 26 }, { wch: 12 }, { wch: 10 }, { wch: 24 }, { wch: 14 }, { wch: 16 }, { wch: 20 }];
 
-    // Cố gắng tô màu nền ô (nếu trình đọc Excel hỗ trợ)
-    const colorHex = { green: 'C6EFCE', yellow: 'FFEB9C', red: 'FFC7CE' };
-    rows.forEach((r, i) => {
-      const addr = XLSX.utils.encode_cell({ r: i + 2, c: 7 }); // dòng data bắt đầu từ r=2 (sau title + header)
-      if (ws[addr]) {
-        ws[addr].s = { fill: { patternType: 'solid', fgColor: { rgb: colorHex[r.mau] }, bgColor: { rgb: colorHex[r.mau] } } };
-      }
+    ws.mergeCells('A1:K1');
+    const titleCell = ws.getCell('A1');
+    titleCell.value = 'TỔNG HỢP THEO DÕI ĐÀO TẠO CHUYÊN MÔN LIÊN TỤC';
+    titleCell.font = { bold: true, size: 13 };
+    titleCell.alignment = { horizontal: 'center' };
+
+    const headerRow = ws.addRow(['Stt', 'BV/PK', 'Mã NV (HRM)', 'Họ tên nhân viên', 'Chức danh', 'Đối tượng', 'Số tiết', 'Tình trạng cập nhật CME', 'Ngày cấp CCHN', 'Tiến độ so với 5 năm', 'Số tiết cần bổ sung 2026']);
+    headerRow.font = { bold: true };
+    headerRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE1EBE7' } }; });
+
+    rows.forEach(r => {
+      const row = ws.addRow(r.data);
+      const statusCell = row.getCell(8);
+      statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: colorArgb[r.mau] } };
+      statusCell.font = { color: { argb: fontArgb[r.mau] }, bold: true };
     });
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo CME');
-    XLSX.writeFile(wb, `bao_cao_CME_${todayStr}.xlsx`, { cellStyles: true });
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bao_cao_CME_${todayStr}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   } catch (e) {
     alert('Xuất báo cáo thất bại: ' + e.message);
   }
