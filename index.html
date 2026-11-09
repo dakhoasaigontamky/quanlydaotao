@@ -1235,14 +1235,16 @@ function determineLoaiFromRow(row) {
   return 'cme';
 }
 
-function parseCmeTrackingFile(rawRows) {
-  let headerIdx = -1;
+function findCmeHeaderIdx(rawRows) {
   for (let i = 0; i < rawRows.length; i++) {
-    const cell = rawRows[i] && rawRows[i][0];
-    if (cell && String(cell).trim() === 'STT') { headerIdx = i; break; }
+    const c0 = rawRows[i] && rawRows[i][0];
+    const c1 = rawRows[i] && rawRows[i][1];
+    if (c0 && String(c0).trim() === 'STT' && c1 && String(c1).toLowerCase().includes('họ')) return i;
   }
-  if (headerIdx === -1) throw new Error('Không tìm thấy dòng tiêu đề (cột "STT"). Kiểm tra lại file có đúng mẫu Bảng theo dõi CME không.');
+  return -1;
+}
 
+function parseCmeRowsFrom(rawRows, headerIdx) {
   const peopleMap = {};
   let curKey = null;
   let totalCertRows = 0;
@@ -1277,25 +1279,58 @@ function parseCmeTrackingFile(rawRows) {
   return { people: Object.values(peopleMap), totalCertRows, unparsedDateCount };
 }
 
+// Giữ tương thích cũ: parse 1 mảng rows duy nhất (1 sheet)
+function parseCmeTrackingFile(rawRows) {
+  const headerIdx = findCmeHeaderIdx(rawRows);
+  if (headerIdx === -1) throw new Error('Không tìm thấy dòng tiêu đề (cột "STT"). Kiểm tra lại file có đúng mẫu Bảng theo dõi CME không.');
+  return parseCmeRowsFrom(rawRows, headerIdx);
+}
+
+// Quét TẤT CẢ sheet trong file, gộp các sheet có đúng định dạng bảng CME (ví dụ "Bác sĩ", "Điều dưỡng - KTV")
+// thành 1 danh sách người + chứng chỉ duy nhất. Sheet tổng hợp/thống kê (không có cột "Họ và tên" ở đúng vị trí) sẽ tự bị bỏ qua.
+function parseAllCmeSheets(wb) {
+  const peopleMap = {};
+  let totalCertRows = 0;
+  let unparsedDateCount = 0;
+  let sheetsUsed = [];
+
+  wb.SheetNames.forEach(name => {
+    const ws = wb.Sheets[name];
+    const rawRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+    const headerIdx = findCmeHeaderIdx(rawRows);
+    if (headerIdx === -1) return;
+    sheetsUsed.push(name);
+    const r = parseCmeRowsFrom(rawRows, headerIdx);
+    totalCertRows += r.totalCertRows;
+    unparsedDateCount += r.unparsedDateCount;
+    r.people.forEach(p => {
+      const key = normKey(p.hoTen);
+      if (!peopleMap[key]) peopleMap[key] = p;
+      else peopleMap[key].certs = peopleMap[key].certs.concat(p.certs);
+    });
+  });
+
+  if (!sheetsUsed.length) throw new Error('Không tìm thấy sheet nào đúng định dạng bảng theo dõi CME (cần có dòng tiêu đề "STT" + "Họ và tên"). Kiểm tra lại file.');
+  return { people: Object.values(peopleMap), totalCertRows, unparsedDateCount, sheetsUsed };
+}
+
 async function handleCmeBulkImport(event) {
   const file = event.target.files[0];
   if (!file) return;
   event.target.value = '';
   try {
-    const rawRows = await new Promise((resolve, reject) => {
+    const wbData = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = evt => {
         try {
-          const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          resolve(XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true }));
+          resolve(XLSX.read(new Uint8Array(evt.target.result), { type: 'array' }));
         } catch (err) { reject(err); }
       };
       reader.onerror = () => reject(new Error('Không đọc được file.'));
       reader.readAsArrayBuffer(file);
     });
 
-    const { people, totalCertRows, unparsedDateCount } = parseCmeTrackingFile(rawRows);
+    const { people, totalCertRows, unparsedDateCount, sheetsUsed } = parseAllCmeSheets(wbData);
     if (!people.length) { alert('Không tìm thấy dữ liệu người nào trong file.'); return; }
 
     const existingUsers = await sb(`dt_user_profiles?select=id,ho_ten,chuc_vu`);
@@ -1343,7 +1378,8 @@ async function handleCmeBulkImport(event) {
       }
     });
 
-    const confirmMsg = `Tìm thấy ${people.length} người (${matchedCount} đã có tài khoản trong hệ thống, ${externalCount} chưa có tài khoản — vẫn đưa vào thống kê, hiển thị bằng tên).\n` +
+    const confirmMsg = `Đã đọc từ các sheet: ${sheetsUsed.join(', ')}.\n` +
+      `Tìm thấy ${people.length} người (${matchedCount} đã có tài khoản trong hệ thống, ${externalCount} chưa có tài khoản — vẫn đưa vào thống kê, hiển thị bằng tên).\n` +
       `Tổng ${totalCertRows} dòng chứng chỉ sẽ được nhập${unparsedDateCount ? `, trong đó ${unparsedDateCount} dòng không đọc được ngày cấp (vẫn nhập, chỉ để trống ngày)` : ''}.\n\nTiếp tục nhập?`;
     if (!confirm(confirmMsg)) return;
 
